@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DDS Dashboard & Joystick Test</title>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Inter:wght@300;500;700&family=JetBrains+Mono&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #05070a;
+            --panel: rgba(16, 20, 30, 0.7);
+            --accent: #4facfe;
+            --brake: #ff4b2b;
+            --throttle: #00f2fe;
+            --text: #e1e1e1;
+        }
+
+        body { 
+            margin: 0; 
+            background: var(--bg); 
+            color: var(--text); 
+            font-family: 'Inter', sans-serif; 
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        #canvas-container { 
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 1; 
+        }
+
+        .dashboard {
+            position: relative;
+            z-index: 10;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            padding: 30px;
+            width: 400px;
+            pointer-events: none;
+        }
+
+        .panel {
+            background: var(--panel);
+            backdrop-filter: blur(15px);
+            border: 1px solid rgba(255,255,255,0.05);
+            border-radius: 20px;
+            padding: 25px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.4);
+            pointer-events: all;
+        }
+
+        h1 { 
+            margin: 0 0 20px 0; 
+            font-family: 'Orbitron', sans-serif;
+            font-size: 1.1rem; 
+            color: var(--accent); 
+            text-transform: uppercase; 
+            letter-spacing: 2px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .data-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+
+        .data-item {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .label { 
+            color: #666; 
+            font-size: 0.7rem; 
+            text-transform: uppercase; 
+            font-weight: 700;
+        }
+
+        .value { 
+            color: #fff; 
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 1.1rem; 
+        }
+
+        /* Steering Wheel */
+        .controls-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 30px;
+        }
+
+        #steering-wheel {
+            width: 180px;
+            height: 180px;
+            transform-origin: center;
+            transition: transform 0.1s cubic-bezier(0.2, 0, 0.2, 1);
+            filter: drop-shadow(0 0 15px rgba(79, 172, 254, 0.3));
+        }
+
+        /* Pedals */
+        .pedals {
+            display: flex;
+            gap: 40px;
+            width: 100%;
+            justify-content: center;
+        }
+
+        .pedal-group {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .pedal {
+            width: 40px;
+            height: 80px;
+            background: #1a1f2b;
+            border-radius: 8px;
+            position: relative;
+            overflow: hidden;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .pedal-fill {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 0%;
+            transition: height 0.1s;
+        }
+
+        .brake-fill { background: linear-gradient(to top, #ff416c, #ff4b2b); box-shadow: 0 0 20px rgba(255, 75, 43, 0.4); }
+        .throttle-fill { background: linear-gradient(to top, #4facfe, #00f2fe); box-shadow: 0 0 20px rgba(0, 242, 254, 0.4); }
+
+        #status { 
+            position: absolute; bottom: 30px; right: 30px; 
+            padding: 8px 15px; background: rgba(0,0,0,0.5); 
+            border-radius: 20px; font-size: 0.7rem; color: #888;
+            backdrop-filter: blur(5px);
+            z-index: 100;
+        }
+
+        .active-btn { color: var(--accent); font-weight: bold; }
+
+        /* Blinkers */
+        .blinker-container {
+            display: flex;
+            justify-content: space-between;
+            width: 100%;
+            margin-top: 10px;
+        }
+        .blinker {
+            font-size: 1.5rem;
+            color: #1a1f2b;
+            text-shadow: 0 0 5px rgba(0,0,0,0.5);
+            transition: color 0.1s;
+        }
+        .blinker.active {
+            color: #ffff00;
+            text-shadow: 0 0 15px rgba(255, 255, 0, 0.8);
+        }
+    </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+</head>
+<body>
+    <div class="dashboard">
+        <!-- Camera Panel -->
+        <div class="panel" style="width: 320px; padding: 10px;">
+            <h1 style="margin-bottom: 10px;">📡 LIVE CAMERA FEED</h1>
+            <img id="v-cam" style="width: 100%; border-radius: 10px; background: #000;" src="https://via.placeholder.com/320x240?text=Waiting+for+DDS+Stream">
+        </div>
+
+        <!-- IMU Panel -->
+        <div class="panel">
+            <h1><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg> System Orientation</h1>
+            <div class="data-grid">
+                <div class="data-item"><span class="label">Roll</span><span id="v-roll" class="value">0.0°</span></div>
+                <div class="data-item"><span class="label">Pitch</span><span id="v-pitch" class="value">0.0°</span></div>
+                <div class="data-item"><span class="label">Yaw</span><span id="v-yaw" class="value">0.0°</span></div>
+                <div class="data-item"><span class="label">Force Gen</span><span id="v-accz" class="value">9.8 G</span></div>
+                <div class="data-item"><span class="label">Driving Mode</span><span id="v-mode" class="value" style="color: #00f2fe; font-weight: bold;">AUTO</span></div>
+            </div>
+        </div>
+
+        <!-- Joystick Panel -->
+        <div class="panel">
+            <h1><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v8M8 12h8"/></svg> Vehicle Controls</h1>
+            <div class="controls-container">
+                <svg id="steering-wheel" viewBox="0 0 100 100">
+                    <circle cx="50" cy="50" r="45" fill="none" stroke="#1a1f2b" stroke-width="8"/>
+                    <circle cx="50" cy="50" r="45" fill="none" stroke="var(--accent)" stroke-width="2" stroke-dasharray="2 4"/>
+                    <!-- Spokes -->
+                    <rect x="47" y="10" width="6" height="40" fill="var(--accent)" rx="2"/>
+                    <rect x="10" y="47" width="40" height="6" fill="var(--accent)" rx="2"/>
+                    <rect x="50" y="47" width="40" height="6" fill="var(--accent)" rx="2"/>
+                    <!-- Center -->
+                    <circle cx="50" cy="50" r="12" fill="#0b0e14" stroke="var(--accent)" stroke-width="2"/>
+                    <path d="M45 45L55 55M55 45L45 55" stroke="var(--accent)" stroke-width="1.5"/>
+                </svg>
+
+                <div class="blinker-container">
+                    <span id="blinker-l" class="blinker">◀</span>
+                    <span id="blinker-r" class="blinker">▶</span>
+                </div>
+
+                <div class="pedals">
+                    <div class="pedal-group">
+                        <span class="label">Brake</span>
+                        <div class="pedal"><div id="f-brake" class="pedal-fill brake-fill"></div></div>
+                    </div>
+                    <div class="pedal-group">
+                        <span class="label">Throttle</span>
+                        <div class="pedal"><div id="f-throttle" class="pedal-fill throttle-fill"></div></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="canvas-container"></div>
+    <div id="status">INITIALIZING...</div>
+
+    <script>
+        // [교체 후] Three.js Background & Scene Setup
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(window.devicePixelRatio); // 고해상도 지원
+        document.getElementById('canvas-container').appendChild(renderer.domElement);
+
+        // 1. RViz 스타일 격자(Grid) 및 축(Axes) 추가
+        const gridHelper = new THREE.GridHelper(50, 50, 0x4facfe, 0x1a1f2b);
+        gridHelper.position.y = -2; // 로봇 아래에 위치
+        scene.add(gridHelper);
+
+        const axesHelper = new THREE.AxesHelper(5);
+        scene.add(axesHelper);
+
+        // 2. 조명 강화
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+        scene.add(ambientLight);
+
+        const spotLight = new THREE.SpotLight(0x4facfe, 2);
+        spotLight.position.set(10, 20, 10);
+        scene.add(spotLight);
+
+        // 3. 단순 상자 대신 "차량 느낌"의 모델 생성
+        const vehicleGroup = new THREE.Group();
+
+        // 메인 바디
+        const bodyGeom = new THREE.BoxGeometry(4, 1.5, 6);
+        const bodyMat = new THREE.MeshPhongMaterial({
+            color: 0x1a1f2b,
+            shininess: 100,
+            specular: 0x4facfe,
+            transparent: true,
+            opacity: 0.9
+        });
+        const body = new THREE.Mesh(bodyGeom, bodyMat);
+        vehicleGroup.add(body);
+
+        // 앞쪽 표시 (앞유리 느낌)
+        const windowGeom = new THREE.BoxGeometry(3.5, 0.8, 2);
+        const windowMat = new THREE.MeshPhongMaterial({ color: 0x4facfe, emissive: 0x4facfe, emissiveIntensity: 0.3 });
+        const win = new THREE.Mesh(windowGeom, windowMat);
+        win.position.set(0, 0.5, 1.5);
+        vehicleGroup.add(win);
+
+        scene.add(vehicleGroup);
+
+        // 변수명 변경 반영: 기존 board -> vehicleGroup
+        const board = vehicleGroup;
+
+        camera.position.set(12, 10, 15);
+        camera.lookAt(0, 0, 0);
+
+        function animate() {
+            requestAnimationFrame(animate);
+            // 부드러운 배경 회전 효과 (선택 사항)
+            // scene.rotation.y += 0.001;
+            renderer.render(scene, camera);
+        }
+        animate();
+
+        // Data Management
+        async function updateData() {
+            try {
+                const response = await fetch('data.json?t=' + Date.now());
+                const data = await response.json();
+                
+                // Camera Update
+                if (data.img && data.img.length > 0) {
+                    document.getElementById('v-cam').src = 'data:image/jpeg;base64,' + data.img;
+                }
+                
+                // IMU Update
+                document.getElementById('v-roll').innerText = data.roll.toFixed(1) + '°';
+                document.getElementById('v-pitch').innerText = data.pitch.toFixed(1) + '°';
+                document.getElementById('v-yaw').innerText = data.yaw.toFixed(1) + '°';
+                document.getElementById('v-accz').innerText = data.accz.toFixed(2) + ' G';
+                
+                board.rotation.x = data.roll * (Math.PI / 180);
+                board.rotation.z = -data.pitch * (Math.PI / 180);
+                board.rotation.y = data.yaw * (Math.PI / 180);
+
+                // Mode Update
+                const modeEl = document.getElementById('v-mode');
+                modeEl.innerText = data.auto_mode ? 'AUTO' : 'MANUAL';
+                modeEl.style.color = data.auto_mode ? '#00f2fe' : '#ffff00';
+                modeEl.style.textShadow = data.auto_mode ? 'none' : '0 0 10px rgba(255,255,0,0.5)';
+
+                // Joystick Update
+                // Steering: -1.0 to 1.0 -> -180 to 180 degrees
+                const rotation = data.joy_steering * 180;
+                document.getElementById('steering-wheel').style.transform = `rotate(${rotation}deg)`;
+
+                // Pedals: 0.0 or 1.0 (since they are buttons 6,7)
+                document.getElementById('f-brake').style.height = (data.joy_brake * 100) + '%';
+                document.getElementById('f-throttle').style.height = (data.joy_throttle * 100) + '%';
+
+                // Blinker Update
+                const blinker = data.joy_blinker;
+                const leftBlinker = document.getElementById('blinker-l');
+                const rightBlinker = document.getElementById('blinker-r');
+                const now = Date.now();
+                const isBlinking = (Math.floor(now / 500) % 2 === 0);
+
+                leftBlinker.classList.remove('active');
+                rightBlinker.classList.remove('active');
+
+                if (blinker === 1) { // Left
+                    if (isBlinking) leftBlinker.classList.add('active');
+                } else if (blinker === 2) { // Right
+                    if (isBlinking) rightBlinker.classList.add('active');
+                } else if (blinker === 3) { // Hazard
+                    if (isBlinking) {
+                        leftBlinker.classList.add('active');
+                        rightBlinker.classList.add('active');
+                    }
+                }
+
+                document.getElementById('status').innerText = 'DDS LINK ACTIVE';
+                document.getElementById('status').style.color = '#00f2fe';
+            } catch (e) {
+                document.getElementById('status').innerText = 'WAITING FOR DATA...';
+                document.getElementById('status').style.color = '#ff4b2b';
+            }
+        }
+
+        setInterval(updateData, 50);
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+    </script>
+</body>
+</html>

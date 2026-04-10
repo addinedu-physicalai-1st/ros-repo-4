@@ -1,0 +1,28 @@
+import rclpy
+from rclpy.node import Node
+from std_msgs.msg import String # We'll need to check the actual msg type or use generic
+import json
+import os
+import time
+
+# Since we don't have the specific IDL generated for Python easily,
+# we might need to use a generic subscriber or assuming the topic name is correct.
+# However, ROS 2 Jazzy usually maps DDS topics to ROS topics.
+# Wait, the C++ code uses 'rt/SensorDataTopic'. 
+# We need the SensorData msg type in Python.
+
+# If we don't have the message type, we can't easily subscribe in Python.
+# Alternatively, I can write a small C++ bridge that writes the JSON.
+# Let's check if there is a 'SensorData' msg package in the workspace.
+
+class IMUBridge(Node):
+    def __init__(self):
+        super().__init__('imu_bridge')
+        # We'll use a placeholder for now and I'll verify the message type.
+        # If the user is using DDS directly, I might need to use a C++ bridge.
+        
+        # ACTUALLY, I'll write a C++ bridge because we ALREADY HAVE the C++ IDL code.
+        pass
+
+if __name__ == '__main__':
+    pass

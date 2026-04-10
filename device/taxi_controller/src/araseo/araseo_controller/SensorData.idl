@@ -1,0 +1,6 @@
+struct SensorData {
+    unsigned long index;
+    string sensor_name;
+    sequence<float> data;
+    string status;
+};

@@ -1,0 +1,8 @@
+struct VehicleControl {
+    unsigned long index;
+    float steering;     // -1.0 (Left) to 1.0 (Right)
+    float accelerator;  // 0.0 to 1.0
+    float brake;        // 0.0 to 1.0
+    int blinker;        // 0: None, 1: Left, 2: Right, 3: Hazard
+    boolean manual_mode; // true: Manual, false: Autonomous
+};
