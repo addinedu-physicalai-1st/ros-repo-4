@@ -1,0 +1,2 @@
+# Optional: I2C OLED (SSD1306 / SH1106). Use the same Python as ROS (e.g. python3 -m pip install --user -r requirements-oled.txt)
+luma.oled>=3.12.0

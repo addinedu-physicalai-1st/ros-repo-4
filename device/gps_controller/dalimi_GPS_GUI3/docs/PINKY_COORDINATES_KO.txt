@@ -1,0 +1,57 @@
+dalimi_GPS_GUI3 - 핑키(로봇)별 좌표·자세를 얻는 방식 (요약)
+================================================================
+
+■ 기본 개념
+  - "핑키 하나" = ArUco 마커 ID 하나. 환경 변수 PINKY_MARKER_IDS에 나열한 각 ID에 대해
+    동일한 방식으로 좌표를 계산한다. (ID만 다를 땐, 알고리즘은 공통)
+  - 기하 계산에는 마커 ID만 사용한다. PINKY_NAMES는 화면 표시용 이름일 뿐이다.
+
+■ 한 프레임 처리 순서
+  1) 카메라 영상에서 ArUco 검출 (detect_aruco_markers_scaled 등, 필요 시 다운스케일 검출)
+  2) 맵 기준 변환: MAP_MARKER_IDS 순서와 MAP_CORNER_*_X_MM / Y_MM으로 주어진 네 모서리의 mm 좌표를 대응점으로 하여
+     호모그래피 H를 구한다. (solve_homography_from_4_markers_custom)
+     → 픽셀 좌표를 경기장 바닥의 퍼리미터 mm 좌표로 옮기는 3x3 변환.
+     네 개의 맵 마커 중 하나라도 해당 프레임에 없으면 H가 없고, 핑키 좌표도 계산하지 않음.
+  3) PINKY_MARKER_IDS에 있는 각 pid에 대해:
+     - 검출 목록에서 marker_id == pid 인 첫 번째 검출만 사용. (같은 ID가 여러 개면 첫 검출만)
+     - 없으면 그 핑키는 해당 프레임 스킵.
+  4) 위치 (x_mm, y_mm):
+     - 검출된 마커 중심 det.center_px에 H를 적용 → mm좌표
+     - 여기에 pinky_offsets_mm[pid] (또는 .env의 PINKY_OFFSETS_JSON) 만큼 (dx, dy) 더함
+       → 마커 중심과 실제 기준점(차체 중심 등) 보정
+  5) 맵 영역 필터:
+     - map_corner_mm으로 만든 사각형(볼록 다각형) 안에 (x_mm, y_mm)이 있을 때만 유효.
+     - 밖이면 표시·전송 대상에서 제외.
+  6) 방향 (yaw):
+     - 마커 구석점 0번·1번을 H로 mm 좌표로 변환, 그 두 점의 베터로 yaw_abs_deg = atan2(dy, dx) (도)
+     - ABS_HEADING_DEG(절대 기준 각)을 빼서 상대각 yaw_rel로 바꾸고,
+       UI·WebSocket의 yaw_deg는 이 상대각(-180~180도로 랩).
+  7) robots 리스트에 pinky_id, name(선택), x_mm, y_mm, yaw_deg, yaw_abs_deg 저장.
+
+■ WebSocket 전송
+  - UI에서 WebSocket 전송이 켜져 있고, WS_SEND_EVERY_N_FRAMES마다
+    로봇(핑키)마다 JSON 한 건씩 전송: x_mm, y_mm, yaw_deg, frame_id,
+    pinky_id(pid의 하위 8비트), ros_main_id(전체 pid).
+
+■ 관련 .env 키
+  - MAP_MARKER_IDS         : 맵 모서리 넣은4개에 대응하는 마커 ID (순서 = 모서리 넣은 순서)
+  - MAP_CORNER_i_X_MM, Y_MM : 각 ID가 대응하는 mm좌표
+  - PINKY_MARKER_IDS        : 핑키(로봇) ArUco ID 목록
+  - PINKY_OFFSETS_JSON      : ID별 mm 오프셋 JSON, 예: {"14": [dx, dy], ...}
+  - PINKY_NAMES             : 표시용 이름만 (좌표 계산과 무관)
+  - ABS_HEADING_DEG         : yaw 상대각 기준
+  - WS_URI, FRAME_ID, WS_SEND_EVERY_N_FRAMES : 전송 설정
+
+■ 주의사항
+  - 동일 마커 ID가 화면에 두 번 나오면 첫 검출만 쓰여 잘못된 위치가 될 수 있음.
+  - 기본 경로에서는 렌즈 외곡 보정을 쓰지 않을 수 있어, 렌즈·높이에 따라 mm 오차가 칠수록 커짐.
+  - 맵 안쪽 판정은 mm평면에서 단순 다각형 포함 검사이며, 모서리 넣은 순서가
+    일관된 사각형이어야 한다.
+
+■ 코드 위치
+  - src/dalimi_gps_gui3/ui/widgets/field_tab.py (_overlay: 검출·호모그래피·yaw)
+  - src/dalimi_gps_gui3/vision/aruco_utils.py (검출, 호모그래피, apply_homography)
+  - src/dalimi_gps_gui3/ws_sender.py (WebSocket 페이로드)
+  - src/dalimi_gps_gui3/config.py (load_config에서 .env 반영)
+
+파일 경로: dalimi_GPS_GUI3/docs/PINKY_COORDINATES_KO.txt

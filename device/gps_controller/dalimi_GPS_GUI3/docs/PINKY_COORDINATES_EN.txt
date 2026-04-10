@@ -1,0 +1,69 @@
+dalimi_GPS_GUI3 - How each robot ("pinky") gets pose: x_mm, y_mm, yaw_deg
+================================================================================
+Plain ASCII only (safe for copy-paste and machine translation).
+
+SUMMARY
+-------
+- One pinky = one ArUco marker id listed in PINKY_MARKER_IDS.
+- Four fixed map markers + their mm corners build homography H (image px -> field mm).
+- For each pinky id: map marker center to mm, add per-id offset, clip to map polygon, compute yaw.
+- PINKY_NAMES is UI labels only; math uses marker id only.
+
+PIPELINE (ONE CAMERA FRAME)
+----------------------------
+1. Detect ArUco markers (detect_aruco_markers_scaled; optional downscale for speed).
+2. Build 3x3 homography H with solve_homography_from_4_markers_custom:
+   - Inputs: detections, map_marker_ids order, map_corner_mm (four mm corner points).
+   - Source points: marker centers in pixels for those four ids.
+   - Destination: the four mm corners in order.
+   If any of the four map ids is missing in this frame, H is None -> no pinky poses.
+3. For each pid in pinky_marker_ids:
+   - Pick the first detection where marker_id == pid (next(...)).
+   - If none, skip that pinky for this frame.
+4. Position:
+   - (x_mm, y_mm) = apply_homography(H, det.center_px)
+   - Add pinky_offsets_mm[pid] from config / PINKY_OFFSETS_JSON: (dx, dy).
+5. Map gate: keep only points inside the convex quad map_corner_mm (test in mm).
+6. Yaw:
+   - Map marker corner pixels 0 and 1 to mm with H.
+   - dx, dy = c1_mm - c0_mm in mm plane.
+   - yaw_abs_deg = degrees(atan2(dy, dx)).
+   - yaw_deg (relative) = wrap yaw_abs_deg - abs_heading_deg to [-180, 180].
+7. Append to robots list: pinky_id, name, x_mm, y_mm, yaw_deg, yaw_abs_deg.
+
+WEBSOCKET
+---------
+When enabled, every WS_SEND_EVERY_N_FRAMES, RobotWsSender sends one JSON per robot:
+  x_mm, y_mm, yaw_deg, frame_id,
+  pinky_id = int(pid) & 0xFF,
+  ros_main_id = full int(pid).
+
+DEFAULT MAP CORNERS (code defaults, ids 0,1,2,3 unless overridden)
+------------------------------------------------------------------
+  (0, 0), (1880, 0), (1880, 1410), (0, 1410)  -- units: mm
+
+RELATED .env KEYS
+-----------------
+  MAP_MARKER_IDS           -- four map corner marker ids, order matches corners
+  MAP_CORNER_i_X_MM        -- mm X for corner i (i = 0..3)
+  MAP_CORNER_i_Y_MM        -- mm Y for corner i
+  PINKY_MARKER_IDS         -- comma-separated pinky / robot ArUco ids
+  PINKY_OFFSETS_JSON       -- per-id offset, e.g. {"14": [dx, dy], ...}
+  PINKY_NAMES              -- display names only
+  ABS_HEADING_DEG          -- reference for relative yaw_deg
+  WS_URI, FRAME_ID, WS_SEND_EVERY_N_FRAMES
+
+CODE LOCATIONS
+--------------
+  src/dalimi_gps_gui3/ui/widgets/field_tab.py  (_overlay)
+  src/dalimi_gps_gui3/vision/aruco_utils.py
+  src/dalimi_gps_gui3/ws_sender.py
+  src/dalimi_gps_gui3/config.py
+
+CAVEATS
+-------
+- First detection wins per id; two markers with the same id in view is unsafe.
+- No lens distortion model by default; mm error depends on lens and camera height.
+- Inside-map test is polygon-in-mm; corner order must form a consistent quad.
+
+File: dalimi_GPS_GUI3/docs/PINKY_COORDINATES_EN.txt
