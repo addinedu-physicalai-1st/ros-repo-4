@@ -25,5 +25,9 @@
     
     <node pkg="pinky_bringup" exec="battery_publisher">
     </node>
+
+    <node pkg="pinky_bringup" exec="gps_odometry_calibrator">
+        <param from="$(find-pkg-share pinky_bringup)/config/pinky_params.yaml"/>
+    </node>
     
 </launch>

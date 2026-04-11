@@ -1,8 +1,8 @@
 bt_navigator:
   ros__parameters:
-    global_frame: odom
+    global_frame: map
     robot_base_frame: base_footprint
-    odom_topic: odom
+    odom_topic: odom/raw
     bt_loop_duration: 10
     action_server_result_timeout: 900.0
     navigators: ["navigate_to_pose", "navigate_through_poses"]
@@ -90,7 +90,7 @@ global_costmap:
     ros__parameters:
       update_frequency: 2.0
       publish_frequency: 1.0
-      global_frame: odom
+      global_frame: map
       robot_base_frame: base_footprint
       rolling_window: true
       width: 4
@@ -156,7 +156,7 @@ behavior_server:
     assisted_teleop:
       plugin: "nav2_behaviors::AssistedTeleop"
     local_frame: odom
-    global_frame: odom
+    global_frame: map
     robot_base_frame: base_footprint
     transform_tolerance: 0.1
     simulate_ahead_time: 2.0
@@ -185,7 +185,7 @@ velocity_smoother:
     min_velocity: [-0.25, 0.0, -1.5]
     max_accel: [2.5, 0.0, 3.2]
     max_decel: [-2.5, 0.0, -3.2]
-    odom_topic: "odom"
+    odom_topic: "odom/raw"
     odom_duration: 0.1
     deadband_velocity: [0.0, 0.0, 0.0]
     velocity_timeout: 1.0

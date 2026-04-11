@@ -59,32 +59,31 @@ class GpsOdometryCalibrator(Node):
         super().__init__("gps_odometry_calibrator")
 
         self.declare_parameter("raw_odom_topic", "odom/raw")
-        self.declare_parameter("corrected_odom_topic", "odom")
         self.declare_parameter("gps_topic", "gps/pose")
+        self.declare_parameter("map_frame_id", "map")
         self.declare_parameter("odom_frame_id", "odom")
         self.declare_parameter("base_frame_id", "base_footprint")
         self.declare_parameter("correction_period_sec", 2.0)
         self.declare_parameter("gps_timeout_sec", 5.0)
-        self.declare_parameter("publish_tf", True)
-        self.declare_parameter("use_gps_orientation", True)
+        self.declare_parameter("translation_smoothing_gain", 0.35)
 
         raw_odom_topic = self.get_parameter("raw_odom_topic").value
-        corrected_odom_topic = self.get_parameter("corrected_odom_topic").value
         gps_topic = self.get_parameter("gps_topic").value
+        self.map_frame_id = self.get_parameter("map_frame_id").value
         self.odom_frame_id = self.get_parameter("odom_frame_id").value
         self.base_frame_id = self.get_parameter("base_frame_id").value
         correction_period_sec = float(self.get_parameter("correction_period_sec").value)
         self.gps_timeout_sec = float(self.get_parameter("gps_timeout_sec").value)
-        self.publish_tf = bool(self.get_parameter("publish_tf").value)
-        self.use_gps_orientation = bool(self.get_parameter("use_gps_orientation").value)
+        self.translation_smoothing_gain = float(
+            self.get_parameter("translation_smoothing_gain").value
+        )
 
         self.latest_raw_odom: Optional[Odometry] = None
         self.latest_gps_pose: Optional[PoseStamped] = None
-        self.gps_frame_to_odom: Optional[Pose2D] = None
-        self.odom_correction = Pose2D(0.0, 0.0, 0.0)
+        self.map_to_odom: Optional[Pose2D] = None
+        self.initialized = False
         self.last_gps_stamp = None
 
-        self.corrected_odom_pub = self.create_publisher(Odometry, corrected_odom_topic, 10)
         self.raw_odom_sub = self.create_subscription(
             Odometry,
             raw_odom_topic,
@@ -102,23 +101,21 @@ class GpsOdometryCalibrator(Node):
 
         self.get_logger().info(
             f"GPS odometry calibrator started. raw_odom='{raw_odom_topic}', "
-            f"gps='{gps_topic}', corrected_odom='{corrected_odom_topic}', "
+            f"gps='{gps_topic}', map_frame='{self.map_frame_id}', "
+            f"odom_frame='{self.odom_frame_id}', "
             f"period={correction_period_sec:.1f}s"
         )
 
-    def raw_odom_callback(self, msg: Odometry):
+    def raw_odom_callback(self, msg: Odometry) -> None:
         self.latest_raw_odom = msg
-        corrected_pose = compose_pose(
-            self.odom_correction,
-            pose_to_2d(msg.pose.pose.position, msg.pose.pose.orientation),
-        )
-        self.publish_corrected_odometry(msg, corrected_pose)
+        if self.initialized:
+            self.publish_map_to_odom_tf(msg.header.stamp)
 
-    def gps_callback(self, msg: PoseStamped):
+    def gps_callback(self, msg: PoseStamped) -> None:
         self.latest_gps_pose = msg
         self.last_gps_stamp = Time.from_msg(msg.header.stamp)
 
-    def calibration_timer_callback(self):
+    def calibration_timer_callback(self) -> None:
         if self.latest_raw_odom is None or self.latest_gps_pose is None:
             return
 
@@ -132,66 +129,71 @@ class GpsOdometryCalibrator(Node):
             )
             return
 
-        raw_pose = pose_to_2d(
+        raw_pose = self.get_latest_raw_pose()
+        gps_pose = self.get_latest_gps_pose()
+
+        if not self.initialized:
+            self.map_to_odom = compose_pose(gps_pose, inverse_pose(raw_pose))
+            self.initialized = True
+            self.get_logger().info(
+                f"Initialized '{self.map_frame_id}' -> '{self.odom_frame_id}' from GPS frame "
+                f"'{self.latest_gps_pose.header.frame_id or 'unknown'}'."
+            )
+        else:
+            assert self.map_to_odom is not None
+            target_translation = self.compute_target_translation(raw_pose, gps_pose, self.map_to_odom.yaw)
+            gain = max(0.0, min(1.0, self.translation_smoothing_gain))
+            self.map_to_odom.x += gain * (target_translation.x - self.map_to_odom.x)
+            self.map_to_odom.y += gain * (target_translation.y - self.map_to_odom.y)
+
+            self.get_logger().info(
+                "Applied GPS map correction: "
+                f"map->odom x={self.map_to_odom.x:.3f}m, "
+                f"y={self.map_to_odom.y:.3f}m, "
+                f"yaw={math.degrees(self.map_to_odom.yaw):.2f}deg"
+            )
+
+    def get_latest_raw_pose(self) -> Pose2D:
+        assert self.latest_raw_odom is not None
+        return pose_to_2d(
             self.latest_raw_odom.pose.pose.position,
             self.latest_raw_odom.pose.pose.orientation,
         )
-        gps_pose = pose_to_2d(
+
+    def get_latest_gps_pose(self) -> Pose2D:
+        assert self.latest_gps_pose is not None
+        return pose_to_2d(
             self.latest_gps_pose.pose.position,
             self.latest_gps_pose.pose.orientation,
         )
 
-        if not self.use_gps_orientation:
-            gps_pose = Pose2D(gps_pose.x, gps_pose.y, raw_pose.yaw)
-
-        if self.gps_frame_to_odom is None:
-            self.gps_frame_to_odom = compose_pose(raw_pose, inverse_pose(gps_pose))
-            self.get_logger().info(
-                f"Locked GPS frame '{self.latest_gps_pose.header.frame_id or 'unknown'}' "
-                f"to odom frame '{self.odom_frame_id}'."
-            )
-
-        gps_pose_in_odom = compose_pose(self.gps_frame_to_odom, gps_pose)
-        self.odom_correction = compose_pose(gps_pose_in_odom, inverse_pose(raw_pose))
-
-        self.get_logger().info(
-            "Applied GPS correction: "
-            f"dx={self.odom_correction.x:.3f}m, "
-            f"dy={self.odom_correction.y:.3f}m, "
-            f"dyaw={math.degrees(self.odom_correction.yaw):.2f}deg"
+    def compute_target_translation(self, raw_pose: Pose2D, gps_pose: Pose2D, map_to_odom_yaw: float) -> Pose2D:
+        cos_yaw = math.cos(map_to_odom_yaw)
+        sin_yaw = math.sin(map_to_odom_yaw)
+        return Pose2D(
+            x=gps_pose.x - (cos_yaw * raw_pose.x - sin_yaw * raw_pose.y),
+            y=gps_pose.y - (sin_yaw * raw_pose.x + cos_yaw * raw_pose.y),
+            yaw=map_to_odom_yaw,
         )
 
-        self.publish_corrected_odometry(self.latest_raw_odom, compose_pose(self.odom_correction, raw_pose))
+    def publish_map_to_odom_tf(self, stamp) -> None:
+        if not self.initialized or self.map_to_odom is None:
+            return
 
-    def publish_corrected_odometry(self, raw_odom: Odometry, corrected_pose: Pose2D):
-        odom_msg = Odometry()
-        odom_msg.header.stamp = raw_odom.header.stamp
-        odom_msg.header.frame_id = self.odom_frame_id
-        odom_msg.child_frame_id = self.base_frame_id
-        odom_msg.pose.covariance = raw_odom.pose.covariance
-        odom_msg.twist = raw_odom.twist
+        transform = TransformStamped()
+        transform.header.stamp = stamp
+        transform.header.frame_id = self.map_frame_id
+        transform.child_frame_id = self.odom_frame_id
+        transform.transform.translation.x = self.map_to_odom.x
+        transform.transform.translation.y = self.map_to_odom.y
+        transform.transform.translation.z = 0.0
 
-        odom_msg.pose.pose.position.x = corrected_pose.x
-        odom_msg.pose.pose.position.y = corrected_pose.y
-        odom_msg.pose.pose.position.z = raw_odom.pose.pose.position.z
-
-        qx, qy, qz, qw = quaternion_from_euler(0.0, 0.0, corrected_pose.yaw)
-        odom_msg.pose.pose.orientation.x = qx
-        odom_msg.pose.pose.orientation.y = qy
-        odom_msg.pose.pose.orientation.z = qz
-        odom_msg.pose.pose.orientation.w = qw
-
-        self.corrected_odom_pub.publish(odom_msg)
-
-        if self.publish_tf:
-            transform = TransformStamped()
-            transform.header = odom_msg.header
-            transform.child_frame_id = self.base_frame_id
-            transform.transform.translation.x = corrected_pose.x
-            transform.transform.translation.y = corrected_pose.y
-            transform.transform.translation.z = raw_odom.pose.pose.position.z
-            transform.transform.rotation = odom_msg.pose.pose.orientation
-            self.tf_broadcaster.sendTransform(transform)
+        qx, qy, qz, qw = quaternion_from_euler(0.0, 0.0, self.map_to_odom.yaw)
+        transform.transform.rotation.x = qx
+        transform.transform.rotation.y = qy
+        transform.transform.rotation.z = qz
+        transform.transform.rotation.w = qw
+        self.tf_broadcaster.sendTransform(transform)
 
 
 def main(args=None):

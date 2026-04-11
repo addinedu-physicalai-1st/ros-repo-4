@@ -32,7 +32,7 @@ LaneGraphVisualizer::LaneGraphVisualizer()
 : Node("lane_graph_visualizer")
 {
   graph_file_ = declare_parameter<std::string>("graph_file", "");
-  frame_id_ = declare_parameter<std::string>("frame_id", "odom");
+  frame_id_ = declare_parameter<std::string>("frame_id", "map");
 
   marker_pub_ = create_publisher<visualization_msgs::msg::MarkerArray>(
     "/lane_graph", rclcpp::QoS(1).reliable().transient_local());

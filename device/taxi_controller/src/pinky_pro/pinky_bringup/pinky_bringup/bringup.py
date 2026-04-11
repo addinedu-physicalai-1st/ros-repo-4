@@ -15,7 +15,7 @@ from std_msgs.msg import Float32
 from .dynamixel_driver import DynamixelDriver
 
 TWIST_SUB_TOPIC_NAME = "cmd_vel"
-ODOM_PUB_TOPIC_NAME = "odom"
+ODOM_PUB_TOPIC_NAME = "odom/raw"
 JOINT_PUB_TOPIC_NAME = "joint_states"
 ODOM_FRAME_ID = "odom"
 ODOM_CHILD_FRAME_ID = "base_footprint"
