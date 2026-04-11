@@ -6,7 +6,7 @@ set -euo pipefail
 # dirname gets its folder, and cd && pwd converts it to an absolute path.
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
-LOCAL_SRC_DIR="${PROJECT_ROOT}/src"
+LOCAL_SRC_DIR="${PROJECT_ROOT}"
 
 # These defaults match the command you said you usually use:
 #   ssh pinky@192.168.4.1
