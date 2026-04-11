@@ -147,7 +147,7 @@ install(FILES
 )
 
 install(
-  DIRECTORY launch params rviz behavior_trees bt_legacy include scripts
+  DIRECTORY launch params rviz behavior_trees include scripts
   DESTINATION share/${PROJECT_NAME}
   )
 

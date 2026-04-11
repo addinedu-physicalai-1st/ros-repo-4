@@ -6,7 +6,6 @@ bt_navigator:
     bt_loop_duration: 10
     action_server_result_timeout: 900.0
     navigators: ["navigate_to_pose", "navigate_through_poses"]
-    default_nav_to_pose_bt_xml: "behavior_trees/custom_nav_to_pose.xml"
     navigate_to_pose:
       plugin: "nav2_bt_navigator::NavigateToPoseNavigator"
     navigate_through_poses:
@@ -35,7 +34,6 @@ controller_server:
       yaw_goal_tolerance: 0.10
     FollowPath:
       plugin: "araseo_navigation::RoadDrivingController"
-      graph_file: "params/lane_graph.yaml"
       desired_linear_vel: 0.10
       max_linear_vel: 0.15
       min_linear_vel: 0.03
@@ -126,7 +124,6 @@ planner_server:
     planner_plugins: ["LaneGraph"]
     LaneGraph:
       plugin: "araseo_navigation/LaneGraphPlanner"
-      graph_file: "params/lane_graph.yaml"
       lane_heading_weight: 0.8
       lane_sampling_resolution: 0.05
       path_resolution: 0.05
