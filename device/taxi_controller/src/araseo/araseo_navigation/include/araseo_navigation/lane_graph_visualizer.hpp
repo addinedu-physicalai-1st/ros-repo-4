@@ -33,11 +33,8 @@ private:
     const Lane & lane, int32_t id) const;
   visualization_msgs::msg::Marker makeWaypointMarker(
     const Lane & lane, int32_t id) const;
-  visualization_msgs::msg::Marker makeLaneLabelMarker(
-    const Lane & lane, int32_t id) const;
   visualization_msgs::msg::Marker makeDirectionMarker(
     const Lane & lane, int32_t id) const;
-  std::vector<visualization_msgs::msg::Marker> makeCoordinateMarkers(int32_t & id) const;
   std::vector<visualization_msgs::msg::Marker> makeLaneAreaMarkers(int32_t & id) const;
   std::vector<visualization_msgs::msg::Marker> makeSuccessorMarkers(int32_t & id) const;
 

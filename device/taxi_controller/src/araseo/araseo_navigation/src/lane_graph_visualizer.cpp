@@ -3,7 +3,6 @@
 #include <chrono>
 #include <algorithm>
 #include <cmath>
-#include <cstdio>
 #include <stdexcept>
 #include <string>
 #include <utility>
@@ -25,13 +24,6 @@ geometry_msgs::msg::Quaternion createQuaternionMsgFromYaw(const double yaw)
   q.z = std::sin(yaw * 0.5);
   q.w = std::cos(yaw * 0.5);
   return q;
-}
-
-std::string pointLabel(const geometry_msgs::msg::Point & point)
-{
-  char buffer[64];
-  std::snprintf(buffer, sizeof(buffer), "(%.2f, %.2f)", point.x, point.y);
-  return std::string(buffer);
 }
 
 }  // namespace
@@ -135,17 +127,12 @@ void LaneGraphVisualizer::publishMarkers()
     (void)lane_id;
     marker_array.markers.push_back(makeCenterlineMarker(lane, id++));
     marker_array.markers.push_back(makeWaypointMarker(lane, id++));
-    marker_array.markers.push_back(makeLaneLabelMarker(lane, id++));
     marker_array.markers.push_back(makeDirectionMarker(lane, id++));
   }
 
   auto area_markers = makeLaneAreaMarkers(id);
   marker_array.markers.insert(
     marker_array.markers.end(), area_markers.begin(), area_markers.end());
-
-  auto coord_markers = makeCoordinateMarkers(id);
-  marker_array.markers.insert(
-    marker_array.markers.end(), coord_markers.begin(), coord_markers.end());
 
   auto successor_markers = makeSuccessorMarkers(id);
   marker_array.markers.insert(
@@ -205,29 +192,6 @@ visualization_msgs::msg::Marker LaneGraphVisualizer::makeWaypointMarker(
   return marker;
 }
 
-visualization_msgs::msg::Marker LaneGraphVisualizer::makeLaneLabelMarker(
-  const Lane & lane, const int32_t id) const
-{
-  const auto label_index = lane.centerline.size() / 2U;
-  visualization_msgs::msg::Marker marker;
-  marker.header.frame_id = frame_id_;
-  marker.header.stamp = now();
-  marker.ns = "lane_labels";
-  marker.id = id;
-  marker.type = visualization_msgs::msg::Marker::TEXT_VIEW_FACING;
-  marker.action = visualization_msgs::msg::Marker::ADD;
-  marker.pose.position = lane.centerline[label_index];
-  marker.pose.position.z += 0.14;
-  marker.pose.orientation.w = 1.0;
-  marker.scale.z = 0.06;
-  marker.color.r = 1.0F;
-  marker.color.g = 1.0F;
-  marker.color.b = 1.0F;
-  marker.color.a = 0.95F;
-  marker.text = lane.id;
-  return marker;
-}
-
 visualization_msgs::msg::Marker LaneGraphVisualizer::makeDirectionMarker(
   const Lane & lane, const int32_t id) const
 {
@@ -253,34 +217,6 @@ visualization_msgs::msg::Marker LaneGraphVisualizer::makeDirectionMarker(
   marker.pose.orientation = createQuaternionMsgFromYaw(
     yawBetween(lane.centerline[index], lane.centerline[next_index]));
   return marker;
-}
-
-std::vector<visualization_msgs::msg::Marker> LaneGraphVisualizer::makeCoordinateMarkers(int32_t & id) const
-{
-  std::vector<visualization_msgs::msg::Marker> markers;
-  for (const auto & [lane_id, lane] : lanes_) {
-    (void)lane_id;
-    for (std::size_t i = 0; i < lane.centerline.size(); ++i) {
-      visualization_msgs::msg::Marker marker;
-      marker.header.frame_id = frame_id_;
-      marker.header.stamp = now();
-      marker.ns = "lane_coords";
-      marker.id = id++;
-      marker.type = visualization_msgs::msg::Marker::TEXT_VIEW_FACING;
-      marker.action = visualization_msgs::msg::Marker::ADD;
-      marker.pose.position = lane.centerline[i];
-      marker.pose.position.z += 0.08;
-      marker.pose.orientation.w = 1.0;
-      marker.scale.z = 0.04;
-      marker.color.r = 0.95F;
-      marker.color.g = 0.95F;
-      marker.color.b = 0.95F;
-      marker.color.a = 0.9F;
-      marker.text = pointLabel(lane.centerline[i]);
-      markers.push_back(std::move(marker));
-    }
-  }
-  return markers;
 }
 
 std::vector<visualization_msgs::msg::Marker> LaneGraphVisualizer::makeLaneAreaMarkers(int32_t & id) const

@@ -17,7 +17,7 @@ Panels:
     Expanded:
       - /SetGoal1
       - /Publish Point1
-    Name: Tool Properties
+    Name: Tool
     Splitter Ratio: 0.58
   - Class: rviz_common/Views
     Expanded:
@@ -25,7 +25,7 @@ Panels:
     Name: Views
     Splitter Ratio: 0.5
   - Class: nav2_rviz_plugins/Navigation 2
-    Name: Navigation 2
+    Name: Navigation2
 Visualization Manager:
   Class: ""
   Displays:
@@ -86,7 +86,7 @@ Visualization Manager:
           Value: true
         odom:
           Value: true
-      Marker Scale: 0.3
+      Marker Scale: 0.8
       Name: TF
       Show Arrows: true
       Show Axes: true
@@ -116,13 +116,13 @@ Visualization Manager:
       Position Tolerance: 0.10000000149011612
       Shape:
         Alpha: 1
-        Axes Length: 0.3
-        Axes Radius: 0.03
+        Axes Length: 0.55
+        Axes Radius: 0.05
         Color: 255; 25; 0
-        Head Length: 0.08
-        Head Radius: 0.04
-        Shaft Length: 0.16
-        Shaft Radius: 0.015
+        Head Length: 0.14
+        Head Radius: 0.08
+        Shaft Length: 0.3
+        Shaft Radius: 0.03
         Value: Arrow
       Topic:
         Depth: 5
@@ -153,8 +153,8 @@ Visualization Manager:
       Name: LaserScan
       Position Transformer: XYZ
       Selectable: true
-      Size (Pixels): 4
-      Size (m): 0.009999999776482582
+      Size (Pixels): 6
+      Size (m): 0.019999999552965164
       Style: Points
       Topic:
         Depth: 5
@@ -196,11 +196,11 @@ Visualization Manager:
           Class: rviz_default_plugins/Path
           Color: 255; 80; 0
           Enabled: true
-          Head Diameter: 0.02
-          Head Length: 0.02
-          Length: 0.3
+          Head Diameter: 0.08
+          Head Length: 0.08
+          Length: 0.45
           Line Style: Lines
-          Line Width: 0.04
+          Line Width: 0.08
           Name: Global Plan
           Offset:
             X: 0
@@ -208,9 +208,9 @@ Visualization Manager:
             Z: 0.01
           Pose Color: 255; 255; 255
           Pose Style: Arrows
-          Radius: 0.03
-          Shaft Diameter: 0.01
-          Shaft Length: 0.03
+          Radius: 0.06
+          Shaft Diameter: 0.03
+          Shaft Length: 0.08
           Topic:
             Depth: 5
             Durability Policy: Volatile
@@ -224,11 +224,11 @@ Visualization Manager:
           Class: rviz_default_plugins/Path
           Color: 0; 170; 255
           Enabled: true
-          Head Diameter: 0.05
-          Head Length: 0.03
-          Length: 0.2
+          Head Diameter: 0.08
+          Head Length: 0.06
+          Length: 0.3
           Line Style: Lines
-          Line Width: 0.03
+          Line Width: 0.06
           Name: Local Plan
           Offset:
             X: 0
@@ -236,9 +236,9 @@ Visualization Manager:
             Z: 0.02
           Pose Color: 255; 255; 255
           Pose Style: None
-          Radius: 0.03
-          Shaft Diameter: 0.01
-          Shaft Length: 0.03
+          Radius: 0.05
+          Shaft Diameter: 0.025
+          Shaft Length: 0.06
           Topic:
             Depth: 5
             Durability Policy: Volatile
@@ -341,7 +341,7 @@ Visualization Manager:
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Scale: 2.6
+      Scale: 100.0
       Target Frame: <Fixed Frame>
       Value: TopDownOrtho (rviz_default_plugins)
       X: 0

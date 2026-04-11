@@ -4,6 +4,8 @@
     <arg name="rviz_config_file" default="$(find-pkg-share araseo_navigation)/rviz/lane_nav_view.rviz"/>
     <arg name="lane_graph_file" default="$(find-pkg-share araseo_navigation)/params/lane_graph.yaml"/>
     <arg name="use_sim_time" default="True"/>
+    <arg name="rviz_fullscreen" default="false"/>
+    <arg name="rviz_extra_args" default=""/>
 
     <node pkg="araseo_navigation" exec="lane_graph_visualizer" output="screen">
         <param name="graph_file" value="$(var lane_graph_file)"/>
@@ -11,7 +13,14 @@
         <param name="use_sim_time" value="$(var use_sim_time)"/>
     </node>
 
-    <node pkg="rviz2" exec="rviz2" output="screen" args="-d $(var rviz_config_file)">
+    <let name="rviz_fullscreen_arg" value="--fullscreen" if="$(var rviz_fullscreen)"/>
+    <let name="rviz_fullscreen_arg" value="" unless="$(var rviz_fullscreen)"/>
+
+    <node
+        pkg="rviz2"
+        exec="rviz2"
+        output="screen"
+        args="-d $(var rviz_config_file) $(var rviz_fullscreen_arg) $(var rviz_extra_args)">
         <param name="use_sim_time" value="$(var use_sim_time)"/>
     </node>
 </launch>    
