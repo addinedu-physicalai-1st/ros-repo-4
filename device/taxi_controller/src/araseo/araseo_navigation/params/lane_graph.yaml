@@ -1,0 +1,570 @@
+lanes:
+  # Gazebo minicity map dimensions:
+  #   width  = 1.860 m  -> x in [-0.93, 0.93]
+  #   height = 1.400 m  -> y in [-0.70, 0.70]
+  # Road lanes keep their previous IDs. Intersections now use explicit
+  # connector lanes so the planner builds curved turn paths instead of
+  # cutting diagonally across the center.
+
+  - id: top_east_1
+    kind: road
+    centerline:
+    - - -0.56
+      - 0.45
+    - - -0.16
+      - 0.45
+    successors:
+    - top_east_2
+    - north_to_center
+  - id: top_east_2
+    kind: road
+    centerline:
+    - - 0.16
+      - 0.45
+    - - 0.525
+      - 0.45
+    successors:
+    - curve_tr_inner
+  - id: top_west_1
+    kind: road
+    centerline:
+    - - 0.525
+      - 0.61
+    - - 0.16
+      - 0.61
+    successors:
+    - top_west_2
+    - north_to_center
+  - id: top_west_2
+    kind: road
+    centerline:
+    - - -0.16
+      - 0.61
+    - - -0.56
+      - 0.61
+    successors:
+    - curve_tl_outer
+  - id: bottom_west_1
+    kind: road
+    centerline:
+    - - 0.45
+      - -0.45
+    - - 0.16
+      - -0.45
+    successors:
+    - bottom_west_2
+    - south_to_center
+  - id: bottom_west_2
+    kind: road
+    centerline:
+    - - -0.16
+      - -0.45
+    - - -0.635
+      - -0.45
+    successors:
+    - curve_bl_inner
+  - id: bottom_east_1
+    kind: road
+    centerline:
+    - - -0.635
+      - -0.61
+    - - -0.16
+      - -0.61
+    successors:
+    - bottom_east_2
+    - south_to_center
+  - id: bottom_east_2
+    kind: road
+    centerline:
+    - - 0.16
+      - -0.61
+    - - 0.45
+      - -0.61
+    successors:
+    - curve_br_outer
+  - id: left_south_1
+    kind: road
+    centerline:
+    - - -0.84
+      - 0.33
+    - - -0.84
+      - 0.16
+    successors:
+    - left_south_2
+    - west_to_center
+  - id: left_south_2
+    kind: road
+    centerline:
+    - - -0.84
+      - -0.16
+    - - -0.84
+      - -0.405
+    successors:
+    - curve_bl_outer
+  - id: left_north_1
+    kind: road
+    centerline:
+    - - -0.68
+      - -0.405
+    - - -0.68
+      - -0.16
+    successors:
+    - left_north_2
+    - west_to_center
+  - id: left_north_2
+    kind: road
+    centerline:
+    - - -0.68
+      - 0.16
+    - - -0.68
+      - 0.33
+    successors:
+    - curve_tl_inner
+  - id: right_north_1
+    kind: road
+    centerline:
+    - - 0.84
+      - -0.22
+    - - 0.84
+      - -0.16
+    successors:
+    - right_north_2
+    - east_to_center
+  - id: right_north_2
+    kind: road
+    centerline:
+    - - 0.84
+      - 0.16
+    - - 0.84
+      - 0.295
+    successors:
+    - curve_tr_outer
+  - id: right_south_1
+    kind: road
+    centerline:
+    - - 0.68
+      - 0.295
+    - - 0.68
+      - 0.16
+    successors:
+    - right_south_2
+    - east_to_center
+  - id: right_south_2
+    kind: road
+    centerline:
+    - - 0.68
+      - -0.16
+    - - 0.68
+      - -0.22
+    successors:
+    - curve_br_inner
+  - id: north_to_center
+    kind: road
+    centerline:
+    - - -0.08
+      - 0.33
+    - - -0.08
+      - 0.16
+    successors:
+    - connector_north_south
+    - connector_north_east
+    - connector_north_west
+  - id: center_to_south
+    kind: road
+    centerline:
+    - - -0.08
+      - -0.16
+    - - -0.08
+      - -0.37
+    successors:
+    - bottom_west_2
+    - bottom_east_2
+  - id: south_to_center
+    kind: road
+    centerline:
+    - - 0.08
+      - -0.37
+    - - 0.08
+      - -0.16
+    successors:
+    - connector_south_north
+    - connector_south_east
+    - connector_south_west
+  - id: center_to_north
+    kind: road
+    centerline:
+    - - 0.08
+      - 0.16
+    - - 0.08
+      - 0.33
+    successors:
+    - top_west_2
+    - top_east_2
+  - id: west_to_center
+    kind: road
+    centerline:
+    - - -0.52
+      - -0.08
+    - - -0.16
+      - -0.08
+    successors:
+    - connector_west_east
+    - connector_west_north
+    - connector_west_south
+  - id: center_to_west
+    kind: road
+    centerline:
+    - - -0.16
+      - 0.08
+    - - -0.52
+      - 0.08
+    successors:
+    - left_north_2
+    - left_south_2
+  - id: east_to_center
+    kind: road
+    centerline:
+    - - 0.52
+      - 0.08
+    - - 0.16
+      - 0.08
+    successors:
+    - connector_east_west
+    - connector_east_north
+    - connector_east_south
+  - id: center_to_east
+    kind: road
+    centerline:
+    - - 0.16
+      - -0.08
+    - - 0.52
+      - -0.08
+    successors:
+    - right_south_2
+    - right_north_2
+
+  - id: connector_east_west
+    kind: connector
+    centerline:
+    - - 0.16
+      - 0.08
+    - - 0.04
+      - 0.08
+    - - -0.08
+      - 0.08
+    - - -0.16
+      - 0.08
+    successors:
+    - center_to_west
+  - id: connector_east_north
+    kind: connector
+    centerline:
+    - - 0.16
+      - 0.08
+    - - 0.13
+      - 0.10
+    - - 0.10
+      - 0.13
+    - - 0.08
+      - 0.16
+    successors:
+    - center_to_north
+  - id: connector_east_south
+    kind: connector
+    centerline:
+    - - 0.16
+      - 0.08
+    - - 0.06
+      - 0.05
+    - - -0.02
+      - -0.02
+    - - -0.08
+      - -0.16
+    successors:
+    - center_to_south
+  - id: connector_south_north
+    kind: connector
+    centerline:
+    - - 0.08
+      - -0.16
+    - - 0.08
+      - -0.04
+    - - 0.08
+      - 0.08
+    - - 0.08
+      - 0.16
+    successors:
+    - center_to_north
+  - id: connector_south_east
+    kind: connector
+    centerline:
+    - - 0.08
+      - -0.16
+    - - 0.10
+      - -0.13
+    - - 0.13
+      - -0.10
+    - - 0.16
+      - -0.08
+    successors:
+    - center_to_east
+  - id: connector_south_west
+    kind: connector
+    centerline:
+    - - 0.08
+      - -0.16
+    - - 0.02
+      - -0.10
+    - - -0.08
+      - -0.02
+    - - -0.16
+      - 0.08
+    successors:
+    - center_to_west
+  - id: connector_west_east
+    kind: connector
+    centerline:
+    - - -0.16
+      - -0.08
+    - - -0.04
+      - -0.08
+    - - 0.08
+      - -0.08
+    - - 0.16
+      - -0.08
+    successors:
+    - center_to_east
+  - id: connector_west_north
+    kind: connector
+    centerline:
+    - - -0.16
+      - -0.08
+    - - -0.10
+      - -0.02
+    - - 0.00
+      - 0.06
+    - - 0.08
+      - 0.16
+    successors:
+    - center_to_north
+  - id: connector_west_south
+    kind: connector
+    centerline:
+    - - -0.16
+      - -0.08
+    - - -0.13
+      - -0.10
+    - - -0.10
+      - -0.13
+    - - -0.08
+      - -0.16
+    successors:
+    - center_to_south
+  - id: connector_north_south
+    kind: connector
+    centerline:
+    - - -0.08
+      - 0.16
+    - - -0.08
+      - 0.04
+    - - -0.08
+      - -0.08
+    - - -0.08
+      - -0.16
+    successors:
+    - center_to_south
+  - id: connector_north_east
+    kind: connector
+    centerline:
+    - - -0.08
+      - 0.16
+    - - 0.00
+      - 0.06
+    - - 0.10
+      - -0.02
+    - - 0.16
+      - -0.08
+    successors:
+    - center_to_east
+  - id: connector_north_west
+    kind: connector
+    centerline:
+    - - -0.08
+      - 0.16
+    - - -0.10
+      - 0.13
+    - - -0.13
+      - 0.10
+    - - -0.16
+      - 0.08
+    successors:
+    - center_to_west
+
+  - id: curve_tl_inner
+    kind: road
+    centerline:
+    - - -0.68
+      - 0.33
+    - - -0.677
+      - 0.357
+    - - -0.668
+      - 0.382
+    - - -0.654
+      - 0.405
+    - - -0.635
+      - 0.424
+    - - -0.612
+      - 0.438
+    - - -0.587
+      - 0.447
+    - - -0.56
+      - 0.45
+    successors:
+    - top_east_1
+  - id: curve_tl_outer
+    kind: road
+    centerline:
+    - - -0.56
+      - 0.61
+    - - -0.622
+      - 0.603
+    - - -0.681
+      - 0.582
+    - - -0.735
+      - 0.549
+    - - -0.779
+      - 0.505
+    - - -0.812
+      - 0.451
+    - - -0.833
+      - 0.392
+    - - -0.84
+      - 0.33
+    successors:
+    - left_south_1
+  - id: curve_tr_inner
+    kind: road
+    centerline:
+    - - 0.525
+      - 0.45
+    - - 0.559
+      - 0.446
+    - - 0.592
+      - 0.435
+    - - 0.622
+      - 0.416
+    - - 0.646
+      - 0.392
+    - - 0.665
+      - 0.362
+    - - 0.676
+      - 0.329
+    - - 0.68
+      - 0.295
+    successors:
+    - right_south_1
+  - id: curve_tr_outer
+    kind: road
+    centerline:
+    - - 0.84
+      - 0.295
+    - - 0.832
+      - 0.365
+    - - 0.809
+      - 0.432
+    - - 0.771
+      - 0.491
+    - - 0.721
+      - 0.541
+    - - 0.662
+      - 0.579
+    - - 0.595
+      - 0.602
+    - - 0.525
+      - 0.61
+    successors:
+    - top_west_1
+  - id: curve_br_inner
+    kind: road
+    centerline:
+    - - 0.68
+      - -0.22
+    - - 0.674
+      - -0.271
+    - - 0.657
+      - -0.32
+    - - 0.63
+      - -0.363
+    - - 0.593
+      - -0.4
+    - - 0.55
+      - -0.427
+    - - 0.501
+      - -0.444
+    - - 0.45
+      - -0.45
+    successors:
+    - bottom_west_1
+  - id: curve_br_outer
+    kind: road
+    centerline:
+    - - 0.45
+      - -0.61
+    - - 0.537
+      - -0.6
+    - - 0.619
+      - -0.571
+    - - 0.693
+      - -0.525
+    - - 0.755
+      - -0.463
+    - - 0.801
+      - -0.389
+    - - 0.83
+      - -0.307
+    - - 0.84
+      - -0.22
+    successors:
+    - right_north_1
+  - id: curve_bl_inner
+    kind: road
+    centerline:
+    - - -0.635
+      - -0.45
+    - - -0.645
+      - -0.449
+    - - -0.655
+      - -0.446
+    - - -0.663
+      - -0.44
+    - - -0.67
+      - -0.433
+    - - -0.676
+      - -0.425
+    - - -0.679
+      - -0.415
+    - - -0.68
+      - -0.405
+    successors:
+    - left_north_1
+  - id: curve_bl_outer
+    kind: road
+    centerline:
+    - - -0.84
+      - -0.405
+    - - -0.835
+      - -0.451
+    - - -0.82
+      - -0.494
+    - - -0.795
+      - -0.533
+    - - -0.763
+      - -0.565
+    - - -0.724
+      - -0.59
+    - - -0.681
+      - -0.605
+    - - -0.635
+      - -0.61
+    successors:
+    - bottom_east_1

@@ -1,0 +1,16 @@
+pinky_bringup:
+  ros__parameters:
+    wheel_radius: 0.027
+    wheel_separation: 0.0961
+
+gps_odometry_calibrator:
+  ros__parameters:
+    raw_odom_topic: "odom/raw"
+    corrected_odom_topic: "odom"
+    gps_topic: "gps/pose"
+    odom_frame_id: "odom"
+    base_frame_id: "base_footprint"
+    correction_period_sec: 2.0
+    gps_timeout_sec: 5.0
+    publish_tf: true
+    use_gps_orientation: true

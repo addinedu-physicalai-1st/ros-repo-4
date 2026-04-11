@@ -1,0 +1,11 @@
+<class_libraries>
+  <library path="araseo_road_driving_controller">
+    <class
+      type="araseo_navigation::RoadDrivingController"
+      base_class_type="nav2_core::Controller">
+      <description>
+        Lightweight lane-road controller for slow driving on the lane graph path.
+      </description>
+    </class>
+  </library>
+</class_libraries>
