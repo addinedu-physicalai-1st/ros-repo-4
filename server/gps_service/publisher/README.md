@@ -12,7 +12,7 @@
 
 - 메시지 타입: `gps_field_msgs/msg/PinkyGps`
 - 의미: 바닥(필드)을 **가로 1880 mm, 세로 1410 mm** 직사각형으로 두고, 그 안에서의 위치를 **밀리미터(mm)** 로 표현한 것입니다. (실제 GPS가 아니라 **실내 좌표**에 가깝습니다.)
-- 기본 토픽 이름: **`/pinky_{ROS_DOMAIN_ID}/gps_pos`** (예: `export ROS_DOMAIN_ID=23` → `/pinky_23/gps_pos`)
+- 기본 토픽 이름: **`/pinky_{pinky_id}/gps_pos`** (예: `pinky_id:=14` → `/pinky_14/gps_pos`)
 
 | 항목 | 설명 |
 |------|------|
@@ -21,7 +21,7 @@
 | `yaw_deg` | 방향 (도) |
 | `header` | 시간·좌표계 이름(`frame_id`) 등 |
 
-기본 설정에서는 **`pinky_ids`가 비어 있으면** `ROS_DOMAIN_ID`에 맞는 **한 개의** `pinky_id`만 시뮬합니다. 여러 대를 한 토픽에 올리려면 `-p pinky_ids:="[0,1,2]"` 처럼 지정하면 됩니다.
+기본 설정에서는 **`pinky_ids`가 비어 있으면** 기본값 또는 설정된 **한 개의** `pinky_id`만 시뮬합니다. 여러 대를 한 토픽에 올리려면 `-p pinky_ids:="[0,1,2]"` 처럼 지정하면 됩니다.
 
 ## 준비물
 

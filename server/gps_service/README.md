@@ -1,6 +1,6 @@
 # GPSTopicTest (ROS 2)
 
-필드 크기 **1880 mm x 1410 mm** 를 가정한 “GPS” 형태 좌표(`x_mm`, `y_mm`)를 기본 토픽 **`/pinky_{ROS_DOMAIN_ID}/gps_pos`** 로 **발행**하고, 구독 쪽에서 **Tk / SPI LCD** 등으로 보여 주는 예제입니다. (`src/gps_field_ws_bridge`: 웹소켓 → 동일 토픽)
+필드 크기 **1880 mm x 1410 mm** 를 가정한 “GPS” 형태 좌표(`x_mm`, `y_mm`)를 기본 토픽 **`/pinky_{pinky_id}/gps_pos`** 로 **발행**하고, 구독 쪽에서 **Tk / SPI LCD** 등으로 보여 주는 예제입니다. (`src/gps_field_ws_bridge`: 웹소켓 → 동일 토픽)
 
 ## 폴더 안내
 

@@ -1,11 +1,10 @@
 # WebSocket → `PinkyGps` 발행 브리지
 
-**클라이언트(WebSocket)** ↔ **`ws_gps_publisher`(서버)** → **`/pinky_{ROS_DOMAIN_ID}/gps_pos`** (`gps_field_msgs/PinkyGps`)
+**클라이언트(WebSocket)** ↔ **`ws_gps_publisher`(서버)** → **`/pinky_{pinky_id}/gps_pos`** (`gps_field_msgs/PinkyGps`)
 
 ## 개념 (네임스페이스 스타일)
 
-- **`export ROS_DOMAIN_ID=23`** 인 기기에서 브리지·구독·시뮬 발행 노드를 돌리면, 기본 토픽은 **`/pinky_23/gps_pos`** 입니다.
-- 토픽 문자열의 숫자는 **환경변수 `ROS_DOMAIN_ID`** 에서만 가져옵니다 (웹소켓 JSON에 `ros_domain_id` 를 넣을 필요 없음).
+- 토픽 이름의 숫자는 **`pinky_id` (또는 `ros_main_id`)** 를 기준으로 결정됩니다.
 - 메시지 타입에 **`pinky_id`** 필드는 남아 있습니다. JSON에 생략하면 서버가 **`ros_main_id`가 있으면 그 값(하위 바이트)**, 없으면 **`ROS_DOMAIN_ID & 0xFF`** 로 채웁니다. 구독 노드는 **`pinky_id:=N`(필터)** 를 쓰면 `msg.pinky_id == N` 인 것만 표시합니다.
 
 ### `ROS_DOMAIN_ID`를 안 썼는데 LCD에 반영되는 이유

@@ -1,6 +1,6 @@
 # 구독(Subscriber) — 핑키에서 위치 받아 LCD에 보이기
 
-이 문서는 **핑키(로봇 PC)** 등에서 기본 **`/pinky_{ROS_DOMAIN_ID}/gps_pos`** 토픽을 **구독**하고, (선택) **`pinky_id`로 메시지를 걸러** **데스크톱 창(Tk)** · **I2C OLED** · **전면 SPI TFT (`pinky_lcd`)** 에 표시하는 방법을 설명합니다.
+이 문서는 **핑키(로봇 PC)** 등에서 기본 **`/pinky_{pinky_id}/gps_pos`** 토픽을 **구독**하고, (선택) **`pinky_id`로 메시지를 걸러** **데스크톱 창(Tk)** · **I2C OLED** · **전면 SPI TFT (`pinky_lcd`)** 에 표시하는 방법을 설명합니다.
 
 발행(서버) 쪽 설명은 **`publisher/README.md`** 를 보세요.
 
@@ -37,8 +37,8 @@ sudo apt install python3-tk    # Tk 쓸 때만 (Debian/Ubuntu 예시)
 
 | 파라미터 | 기본값 | 설명 |
 |----------|--------|-----------|
-| `topic_name` | `""` | 비어 있으면 `topic_pattern` + **`ROS_DOMAIN_ID`** → 기본 `/pinky_N/gps_pos` |
-| `topic_pattern` | `/pinky_{domain_id}/gps_pos` | `topic_name`이 비었을 때만 사용 |
+| `topic_name` | `""` | 비어 있으면 `topic_pattern` + **`pinky_id`** → 기본 `/pinky_N/gps_pos` |
+| `topic_pattern` | `/pinky_{pinky_id}/gps_pos` | `topic_name`이 비었을 때만 사용 |
 | `pinky_id` | `-1` | **`-1`**: 토픽에 오는 메시지 모두 표시. **`0` 이상**: `msg.pinky_id`와 같은 것만 표시 |
 | `field_width_mm` | `1880.0` | 창 제목에만 표시 (안내용) |
 | `field_height_mm` | `1410.0` | 창 제목에만 표시 (안내용) |

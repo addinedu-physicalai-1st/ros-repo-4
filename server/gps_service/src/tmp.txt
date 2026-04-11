@@ -1,2 +1,0 @@
-
- ros2 run gps_field_ws_bridge ws_gps_publisher --ros-args   -p domain_ids_env_file:=.env   -p domain_ids_env_filter_by_ros_main_id:=true
