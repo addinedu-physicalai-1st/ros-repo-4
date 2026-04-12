@@ -6,6 +6,7 @@
 #include <stdexcept>
 #include <utility>
 
+#include "tf2_geometry_msgs/tf2_geometry_msgs.hpp"
 #include "pluginlib/class_list_macros.hpp"
 #include "tf2/utils.h"
 #include "yaml-cpp/yaml.h"
@@ -129,7 +130,21 @@ void RoadDrivingController::setPlan(const nav_msgs::msg::Path & path)
     throw nav2_core::InvalidPath("RoadDrivingController received an empty path");
   }
 
+  const auto plan_frame = !path.header.frame_id.empty() ? path.header.frame_id : path.poses.front().header.frame_id;
+  if (plan_frame.empty()) {
+    throw nav2_core::InvalidPath("RoadDrivingController received a path without a frame_id");
+  }
+  for (const auto & pose : path.poses) {
+    if (!pose.header.frame_id.empty() && pose.header.frame_id != plan_frame) {
+      throw nav2_core::InvalidPath("RoadDrivingController received a path with mixed pose frame_ids");
+    }
+  }
+
   global_plan_ = path;
+  global_plan_.header.frame_id = plan_frame;
+  for (auto & pose : global_plan_.poses) {
+    pose.header.frame_id = plan_frame;
+  }
   cancel_requested_ = false;
   path_progress_index_ = 0U;
 }
@@ -147,107 +162,123 @@ geometry_msgs::msg::TwistStamped RoadDrivingController::computeVelocityCommands(
     throw nav2_core::InvalidPath("RoadDrivingController has no plan to follow");
   }
 
-  const auto closest_index = findClosestPoseIndex(pose);
-  path_progress_index_ = std::max(path_progress_index_, closest_index);
-
-  const auto & goal_pose = global_plan_.poses.back();
-
-  const double goal_distance = distance2D(pose.pose.position, goal_pose.pose.position);
-  const double robot_yaw = tf2::getYaw(pose.pose.orientation);
-  const double goal_yaw = tf2::getYaw(goal_pose.pose.orientation);
-  const double goal_yaw_error = normalizeAngle(goal_yaw - robot_yaw);
+  const auto working_frame = costmap_ros_->getGlobalFrameID();
+  const auto local_pose = transformPoseToFrame(pose, working_frame);
+  const auto local_plan = transformPlanToFrame(working_frame);
+  const auto plan_pose = transformPoseToFrame(pose, getPlanFrame());
 
   geometry_msgs::msg::TwistStamped command;
   command.header.stamp = node_->now();
-  command.header.frame_id = pose.header.frame_id;
+  command.header.frame_id = local_pose.header.frame_id;
+  const auto previous_plan = std::move(global_plan_);
+  global_plan_ = local_plan;
 
-  if (goal_distance <= goal_dist_tolerance_) {
-    if (std::abs(goal_yaw_error) <= goal_yaw_tolerance_) {
+  try {
+    const auto closest_index = findClosestPoseIndex(local_pose);
+    path_progress_index_ = std::max(path_progress_index_, closest_index);
+
+    const auto & goal_pose = global_plan_.poses.back();
+
+    const double goal_distance = distance2D(local_pose.pose.position, goal_pose.pose.position);
+    const double robot_yaw = tf2::getYaw(local_pose.pose.orientation);
+    const double goal_yaw = tf2::getYaw(goal_pose.pose.orientation);
+    const double goal_yaw_error = normalizeAngle(goal_yaw - robot_yaw);
+
+    if (goal_distance <= goal_dist_tolerance_) {
+      if (std::abs(goal_yaw_error) <= goal_yaw_tolerance_) {
+        global_plan_ = previous_plan;
+        return command;
+      }
+
+      command.twist.angular.z = std::clamp(
+        yaw_gain_ * goal_yaw_error,
+        -rotate_to_goal_angular_vel_,
+        rotate_to_goal_angular_vel_);
+      global_plan_ = previous_plan;
       return command;
     }
 
-    command.twist.angular.z = std::clamp(
-      yaw_gain_ * goal_yaw_error,
-      -rotate_to_goal_angular_vel_,
-      rotate_to_goal_angular_vel_);
-    return command;
-  }
+    auto lookahead_index = findLookaheadPoseIndex(
+      local_pose, path_progress_index_, std::max(0.05, lookahead_dist_));
+    auto target_heading = std::atan2(
+      global_plan_.poses[lookahead_index].pose.position.y - local_pose.pose.position.y,
+      global_plan_.poses[lookahead_index].pose.position.x - local_pose.pose.position.x);
+    double heading_error = normalizeAngle(target_heading - robot_yaw);
+    double abs_heading_error = std::abs(heading_error);
 
-  auto lookahead_index = findLookaheadPoseIndex(
-    pose, path_progress_index_, std::max(0.05, lookahead_dist_));
-  auto target_heading = std::atan2(
-    global_plan_.poses[lookahead_index].pose.position.y - pose.pose.position.y,
-    global_plan_.poses[lookahead_index].pose.position.x - pose.pose.position.x);
-  double heading_error = normalizeAngle(target_heading - robot_yaw);
-  double abs_heading_error = std::abs(heading_error);
-
-  if (abs_heading_error >= slow_turn_heading_error_) {
-    const double shorter_lookahead = std::max(0.05, lookahead_dist_ * turn_lookahead_scale_);
-    lookahead_index = findLookaheadPoseIndex(pose, path_progress_index_, shorter_lookahead);
-    target_heading = std::atan2(
-      global_plan_.poses[lookahead_index].pose.position.y - pose.pose.position.y,
-      global_plan_.poses[lookahead_index].pose.position.x - pose.pose.position.x);
-    heading_error = normalizeAngle(target_heading - robot_yaw);
-    abs_heading_error = std::abs(heading_error);
-  }
-
-  if (abs_heading_error >= rotate_in_place_heading_error_) {
-    const auto now = node_->now();
-    if (!lanes_.empty() && (now - last_connector_trace_time_).seconds() >= 1.0) {
-      double lane_distance = std::numeric_limits<double>::max();
-      const auto * lane = findClosestLane(pose, &lane_distance);
-      if (lane != nullptr && lane->kind == "connector") {
-        last_connector_trace_time_ = now;
-        RCLCPP_WARN(
-          logger_,
-          "Connector trace: rotating in place near lane=%s kind=%s lane_dist=%.3f path_idx=%zu lookahead_idx=%zu heading_err=%.3f goal_dist=%.3f",
-          lane->id.c_str(), lane->kind.c_str(), lane_distance, path_progress_index_,
-          lookahead_index, heading_error, goal_distance);
-      }
+    if (abs_heading_error >= slow_turn_heading_error_) {
+      const double shorter_lookahead = std::max(0.05, lookahead_dist_ * turn_lookahead_scale_);
+      lookahead_index = findLookaheadPoseIndex(local_pose, path_progress_index_, shorter_lookahead);
+      target_heading = std::atan2(
+        global_plan_.poses[lookahead_index].pose.position.y - local_pose.pose.position.y,
+        global_plan_.poses[lookahead_index].pose.position.x - local_pose.pose.position.x);
+      heading_error = normalizeAngle(target_heading - robot_yaw);
+      abs_heading_error = std::abs(heading_error);
     }
+
+    if (abs_heading_error >= rotate_in_place_heading_error_) {
+      const auto now = node_->now();
+      if (!lanes_.empty() && (now - last_connector_trace_time_).seconds() >= 1.0) {
+        double lane_distance = std::numeric_limits<double>::max();
+        const auto * lane = findClosestLane(plan_pose, &lane_distance);
+        if (lane != nullptr && lane->kind == "connector") {
+          last_connector_trace_time_ = now;
+          RCLCPP_WARN(
+            logger_,
+            "Connector trace: rotating in place near lane=%s kind=%s lane_dist=%.3f path_idx=%zu lookahead_idx=%zu heading_err=%.3f goal_dist=%.3f",
+            lane->id.c_str(), lane->kind.c_str(), lane_distance, path_progress_index_,
+            lookahead_index, heading_error, goal_distance);
+        }
+      }
+      command.twist.angular.z = std::clamp(
+        yaw_gain_ * heading_error,
+        -max_angular_vel_,
+        max_angular_vel_);
+      global_plan_ = previous_plan;
+      return command;
+    }
+
+    double linear_vel = std::min(desired_linear_vel_, max_speed_limit_);
+    if (abs_heading_error >= slow_turn_heading_error_) {
+      linear_vel = min_linear_vel_;
+    } else if (abs_heading_error > heading_error_slowdown_threshold_) {
+      linear_vel *= 0.5;
+    }
+    if (goal_distance < lookahead_dist_) {
+      linear_vel *= std::clamp(goal_distance / lookahead_dist_, 0.3, 1.0);
+    }
+    linear_vel = std::clamp(linear_vel, min_linear_vel_, max_speed_limit_);
+
+    command.twist.linear.x = linear_vel;
     command.twist.angular.z = std::clamp(
       yaw_gain_ * heading_error,
       -max_angular_vel_,
       max_angular_vel_);
-    return command;
-  }
 
-  double linear_vel = std::min(desired_linear_vel_, max_speed_limit_);
-  if (abs_heading_error >= slow_turn_heading_error_) {
-    linear_vel = min_linear_vel_;
-  } else if (abs_heading_error > heading_error_slowdown_threshold_) {
-    linear_vel *= 0.5;
-  }
-  if (goal_distance < lookahead_dist_) {
-    linear_vel *= std::clamp(goal_distance / lookahead_dist_, 0.3, 1.0);
-  }
-  linear_vel = std::clamp(linear_vel, min_linear_vel_, max_speed_limit_);
-
-  command.twist.linear.x = linear_vel;
-  command.twist.angular.z = std::clamp(
-    yaw_gain_ * heading_error,
-    -max_angular_vel_,
-    max_angular_vel_);
-
-  const auto now = node_->now();
-  if (!lanes_.empty() && linear_vel <= (min_linear_vel_ + 1e-6) &&
-    abs_heading_error >= slow_turn_heading_error_ &&
-    (now - last_connector_trace_time_).seconds() >= 1.0)
-  {
-    double lane_distance = std::numeric_limits<double>::max();
-    const auto * lane = findClosestLane(pose, &lane_distance);
-    if (lane != nullptr && lane->kind == "connector") {
-      last_connector_trace_time_ = now;
-      RCLCPP_WARN(
-        logger_,
-        "Connector trace: crawling near lane=%s kind=%s lane_dist=%.3f path_idx=%zu lookahead_idx=%zu heading_err=%.3f goal_dist=%.3f linear=%.3f angular=%.3f",
-        lane->id.c_str(), lane->kind.c_str(), lane_distance, path_progress_index_,
-        lookahead_index, heading_error, goal_distance,
-        command.twist.linear.x, command.twist.angular.z);
+    const auto now = node_->now();
+    if (!lanes_.empty() && linear_vel <= (min_linear_vel_ + 1e-6) &&
+      abs_heading_error >= slow_turn_heading_error_ &&
+      (now - last_connector_trace_time_).seconds() >= 1.0)
+    {
+      double lane_distance = std::numeric_limits<double>::max();
+      const auto * lane = findClosestLane(plan_pose, &lane_distance);
+      if (lane != nullptr && lane->kind == "connector") {
+        last_connector_trace_time_ = now;
+        RCLCPP_WARN(
+          logger_,
+          "Connector trace: crawling near lane=%s kind=%s lane_dist=%.3f path_idx=%zu lookahead_idx=%zu heading_err=%.3f goal_dist=%.3f linear=%.3f angular=%.3f",
+          lane->id.c_str(), lane->kind.c_str(), lane_distance, path_progress_index_,
+          lookahead_index, heading_error, goal_distance,
+          command.twist.linear.x, command.twist.angular.z);
+      }
     }
-  }
 
-  return command;
+    global_plan_ = previous_plan;
+    return command;
+  } catch (...) {
+    global_plan_ = previous_plan;
+    throw;
+  }
 }
 
 bool RoadDrivingController::cancel()
@@ -320,6 +351,59 @@ void RoadDrivingController::loadLaneGraph()
 
     lanes_.emplace(lane.id, std::move(lane));
   }
+}
+
+std::string RoadDrivingController::getPlanFrame() const
+{
+  if (!global_plan_.header.frame_id.empty()) {
+    return global_plan_.header.frame_id;
+  }
+  if (!global_plan_.poses.empty()) {
+    return global_plan_.poses.front().header.frame_id;
+  }
+  throw nav2_core::InvalidPath("RoadDrivingController has no plan frame");
+}
+
+geometry_msgs::msg::PoseStamped RoadDrivingController::transformPoseToFrame(
+  const geometry_msgs::msg::PoseStamped & pose,
+  const std::string & target_frame) const
+{
+  if (target_frame.empty()) {
+    throw nav2_core::ControllerException("RoadDrivingController target frame is empty");
+  }
+
+  geometry_msgs::msg::PoseStamped transformed_pose = pose;
+  if (transformed_pose.header.frame_id.empty()) {
+    throw nav2_core::ControllerException("RoadDrivingController received pose without a frame_id");
+  }
+
+  if (transformed_pose.header.frame_id == target_frame) {
+    return transformed_pose;
+  }
+
+  try {
+    transformed_pose = tf_->transform(transformed_pose, target_frame, tf2::durationFromSec(0.1));
+  } catch (const tf2::TransformException & ex) {
+    throw nav2_core::ControllerException(
+            "RoadDrivingController failed to transform pose from " +
+            pose.header.frame_id + " to " + target_frame + ": " + ex.what());
+  }
+
+  return transformed_pose;
+}
+
+nav_msgs::msg::Path RoadDrivingController::transformPlanToFrame(const std::string & target_frame) const
+{
+  nav_msgs::msg::Path transformed_plan;
+  transformed_plan.header = global_plan_.header;
+  transformed_plan.header.frame_id = target_frame;
+  transformed_plan.poses.reserve(global_plan_.poses.size());
+
+  for (const auto & pose : global_plan_.poses) {
+    transformed_plan.poses.push_back(transformPoseToFrame(pose, target_frame));
+  }
+
+  return transformed_plan;
 }
 
 const RoadDrivingController::LaneDebugInfo * RoadDrivingController::findClosestLane(

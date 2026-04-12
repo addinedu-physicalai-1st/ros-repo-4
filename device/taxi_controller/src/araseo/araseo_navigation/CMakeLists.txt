@@ -73,6 +73,7 @@ ament_target_dependencies(araseo_road_driving_controller
   rclcpp
   rclcpp_lifecycle
   tf2
+  tf2_geometry_msgs
   tf2_ros
 )
 

@@ -58,6 +58,11 @@ private:
   };
 
   void loadLaneGraph();
+  std::string getPlanFrame() const;
+  geometry_msgs::msg::PoseStamped transformPoseToFrame(
+    const geometry_msgs::msg::PoseStamped & pose,
+    const std::string & target_frame) const;
+  nav_msgs::msg::Path transformPlanToFrame(const std::string & target_frame) const;
   const LaneDebugInfo * findClosestLane(
     const geometry_msgs::msg::PoseStamped & pose,
     double * best_distance = nullptr) const;
