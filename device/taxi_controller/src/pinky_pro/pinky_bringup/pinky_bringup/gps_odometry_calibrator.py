@@ -56,6 +56,14 @@ def normalize_angle(angle: float) -> float:
     return math.atan2(math.sin(angle), math.cos(angle))
 
 
+def interpolate_pose(current: Pose2D, target: Pose2D, translation_gain: float, yaw_gain: float) -> Pose2D:
+    return Pose2D(
+        x=current.x + translation_gain * (target.x - current.x),
+        y=current.y + translation_gain * (target.y - current.y),
+        yaw=normalize_angle(current.yaw + yaw_gain * normalize_angle(target.yaw - current.yaw)),
+    )
+
+
 class GpsOdometryCalibrator(Node):
     def __init__(self):
         super().__init__("gps_odometry_calibrator")
@@ -68,6 +76,7 @@ class GpsOdometryCalibrator(Node):
         self.declare_parameter("correction_period_sec", 2.0)
         self.declare_parameter("gps_timeout_sec", 5.0)
         self.declare_parameter("translation_smoothing_gain", 0.35)
+        self.declare_parameter("yaw_smoothing_gain", 0.35)
 
         raw_odom_topic = self.get_parameter("raw_odom_topic").value
         pinky_id = self.get_parameter("pinky_id").value
@@ -80,6 +89,9 @@ class GpsOdometryCalibrator(Node):
         self.gps_timeout_sec = float(self.get_parameter("gps_timeout_sec").value)
         self.translation_smoothing_gain = float(
             self.get_parameter("translation_smoothing_gain").value
+        )
+        self.yaw_smoothing_gain = float(
+            self.get_parameter("yaw_smoothing_gain").value
         )
 
         self.latest_raw_odom: Optional[Odometry] = None
@@ -147,10 +159,15 @@ class GpsOdometryCalibrator(Node):
             )
         else:
             assert self.map_to_odom is not None
-            target_translation = self.compute_target_translation(raw_pose, gps_pose, self.map_to_odom.yaw)
-            gain = max(0.0, min(1.0, self.translation_smoothing_gain))
-            self.map_to_odom.x += gain * (target_translation.x - self.map_to_odom.x)
-            self.map_to_odom.y += gain * (target_translation.y - self.map_to_odom.y)
+            target_map_to_odom = self.compute_target_map_to_odom(raw_pose, gps_pose)
+            translation_gain = max(0.0, min(1.0, self.translation_smoothing_gain))
+            yaw_gain = max(0.0, min(1.0, self.yaw_smoothing_gain))
+            self.map_to_odom = interpolate_pose(
+                self.map_to_odom,
+                target_map_to_odom,
+                translation_gain,
+                yaw_gain,
+            )
 
             self.get_logger().info(
                 "Applied GPS map correction: "
@@ -174,14 +191,8 @@ class GpsOdometryCalibrator(Node):
             yaw=math.radians(self.latest_gps_pose.yaw_deg),
         )
 
-    def compute_target_translation(self, raw_pose: Pose2D, gps_pose: Pose2D, map_to_odom_yaw: float) -> Pose2D:
-        cos_yaw = math.cos(map_to_odom_yaw)
-        sin_yaw = math.sin(map_to_odom_yaw)
-        return Pose2D(
-            x=gps_pose.x - (cos_yaw * raw_pose.x - sin_yaw * raw_pose.y),
-            y=gps_pose.y - (sin_yaw * raw_pose.x + cos_yaw * raw_pose.y),
-            yaw=map_to_odom_yaw,
-        )
+    def compute_target_map_to_odom(self, raw_pose: Pose2D, gps_pose: Pose2D) -> Pose2D:
+        return compose_pose(gps_pose, inverse_pose(raw_pose))
 
     def publish_map_to_odom_tf(self, stamp) -> None:
         if not self.initialized or self.map_to_odom is None:

@@ -17,3 +17,4 @@ gps_odometry_calibrator:
     correction_period_sec: 2.0
     gps_timeout_sec: 5.0
     translation_smoothing_gain: 0.35
+    yaw_smoothing_gain: 0.35
