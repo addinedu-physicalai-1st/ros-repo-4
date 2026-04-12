@@ -68,7 +68,7 @@ class GpsOdometryCalibrator(Node):
     def __init__(self):
         super().__init__("gps_odometry_calibrator")
 
-        self.declare_parameter("raw_odom_topic", "odom/raw")
+        self.declare_parameter("raw_odom_topic", "odom")
         self.declare_parameter("pinky_id", 0 & 0xFF)
         self.declare_parameter("map_frame_id", "map")
         self.declare_parameter("odom_frame_id", "odom")

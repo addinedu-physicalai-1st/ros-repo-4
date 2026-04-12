@@ -18,7 +18,7 @@ SCENE_SCALE = 420.0
 POINT_RADIUS = 6.0
 LANE_KIND_OPTIONS = ["road", "connector"]
 PACKAGE_ROOT = Path(__file__).resolve().parents[1]
-INSPECTOR_UI_PATH = PACKAGE_ROOT / "ui" / "lane_graph_editor_inspector.ui"
+INSPECTOR_UI_PATH = PACKAGE_ROOT / "scripts" / "lane_graph_editor_inspector.ui"
 
 
 def world_to_scene(x: float, y: float) -> QtCore.QPointF:
@@ -377,6 +377,24 @@ class EditorModel(QtCore.QObject):
             return False
         lane.successors.pop(successor_index)
         self.mark_dirty()
+        self.changed.emit()
+        return True
+
+    def delete_selected_point(self) -> bool:
+        selected_point = self.selected_point()
+        lane = self.selected_lane()
+        if selected_point is None or lane is None:
+            return False
+        if len(lane.centerline) <= 2:
+            self.error_raised.emit("A lane must keep at least two points.")
+            return False
+
+        point_index, _point = selected_point
+        lane.centerline.pop(point_index)
+        self.session.selected_lane_id = lane.lane_id
+        self.session.selected_point_index = None
+        self.mark_dirty()
+        self.selection_changed.emit()
         self.changed.emit()
         return True
 
@@ -972,6 +990,10 @@ class EditorWindow(QtWidgets.QMainWindow):
 
         self.finish_action.setEnabled(model.session.mode == "create")
         self.cancel_action.setEnabled(model.session.mode in {"create", "successor"})
+        self.delete_action.setText(
+            "Delete Point" if model.session.selected_point_index is not None else "Delete Lane"
+        )
+        self.delete_action.setEnabled(model.session.selected_lane_id is not None)
         self.select_action.setChecked(model.session.mode == "select")
         self.create_action.setChecked(model.session.mode == "create")
         self.successor_action.setChecked(model.session.mode == "successor")
@@ -1084,6 +1106,10 @@ class EditorController(QtCore.QObject):
         self.model.remove_selected_successor(self.window.successors_list.currentRow())
 
     def delete_selected_lane(self) -> None:
+        if self.model.selected_point() is not None:
+            if self.model.delete_selected_point():
+                self.window.statusBar().showMessage("Point deleted.")
+            return
         if self.model.delete_selected_lane():
             self.window.statusBar().showMessage("Lane deleted.")
 

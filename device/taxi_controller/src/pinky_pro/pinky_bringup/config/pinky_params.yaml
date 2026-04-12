@@ -9,7 +9,7 @@ gazebo_gps_publisher:
 
 gps_odometry_calibrator:
   ros__parameters:
-    raw_odom_topic: "odom/raw"
+    raw_odom_topic: "odom"
     pinky_id: 54
     map_frame_id: "map"
     odom_frame_id: "odom"
