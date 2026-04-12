@@ -1,14 +1,4 @@
 lanes:
-  # GPS-aligned field frame dimensions:
-  #   width  = 1.880 m  -> x in [0.00, 1.88]
-  #   height = 1.410 m  -> y in [0.00, 1.41]
-  # Origin is the left-bottom edge of the map to match
-  # /pinky_id/gps_pos after gps_odometry_calibrator converts
-  # the GPS field coordinates from mm to meters.
-  # Road lanes keep their previous IDs. Intersections now use explicit
-  # connector lanes so the planner builds curved turn paths instead of
-  # cutting diagonally across the center.
-
 - id: top_east_1
   kind: road
   centerline:
@@ -17,8 +7,8 @@ lanes:
   - - 0.77828
     - 1.158214
   successors:
-  - top_east_2
-  - north_to_center
+  - conn_top_east_straight
+  - conn_top_east_to_south
 - id: top_east_2
   kind: road
   centerline:
@@ -36,8 +26,8 @@ lanes:
   - - 1.10172
     - 1.319357
   successors:
-  - top_west_2
-  - north_to_center
+  - conn_top_west_straight
+  - conn_top_west_to_south
 - id: top_west_2
   kind: road
   centerline:
@@ -55,8 +45,8 @@ lanes:
   - - 1.10172
     - 0.251786
   successors:
-  - bottom_west_2
-  - south_to_center
+  - conn_bot_west_straight
+  - conn_bot_west_to_north
 - id: bottom_west_2
   kind: road
   centerline:
@@ -74,8 +64,8 @@ lanes:
   - - 0.77828
     - 0.090643
   successors:
-  - bottom_east_2
-  - south_to_center
+  - conn_bot_east_straight
+  - conn_bot_east_to_north
 - id: bottom_east_2
   kind: road
   centerline:
@@ -93,8 +83,8 @@ lanes:
   - - 0.090968
     - 0.866143
   successors:
-  - left_south_2
-  - west_to_center
+  - conn_left_south_straight
+  - conn_left_south_to_east
 - id: left_south_2
   kind: road
   centerline:
@@ -112,8 +102,8 @@ lanes:
   - - 0.252688
     - 0.543857
   successors:
-  - left_north_2
-  - west_to_center
+  - conn_left_north_straight
+  - conn_left_north_to_east
 - id: left_north_2
   kind: road
   centerline:
@@ -131,8 +121,8 @@ lanes:
   - - 1.789032
     - 0.543857
   successors:
-  - right_north_2
-  - east_to_center
+  - conn_right_north_straight
+  - conn_right_north_to_west
 - id: right_north_2
   kind: road
   centerline:
@@ -150,8 +140,8 @@ lanes:
   - - 1.627312
     - 0.866143
   successors:
-  - right_south_2
-  - east_to_center
+  - conn_right_south_straight
+  - conn_right_south_to_west
 - id: right_south_2
   kind: road
   centerline:
@@ -180,8 +170,8 @@ lanes:
   - - 0.85914
     - 0.332357
   successors:
-  - bottom_west_2
-  - bottom_east_2
+  - conn_bot_south_to_west
+  - conn_bot_south_to_east
 - id: south_to_center
   kind: road
   centerline:
@@ -201,8 +191,8 @@ lanes:
   - - 1.02086
     - 1.037357
   successors:
-  - top_west_2
-  - top_east_2
+  - conn_top_north_to_east
+  - conn_top_north_to_west
 - id: west_to_center
   kind: road
   centerline:
@@ -222,8 +212,8 @@ lanes:
   - - 0.414409
     - 0.785571
   successors:
-  - left_north_2
-  - left_south_2
+  - conn_left_west_to_north
+  - conn_left_west_to_south
 - id: east_to_center
   kind: road
   centerline:
@@ -243,16 +233,12 @@ lanes:
   - - 1.465591
     - 0.624429
   successors:
-  - right_south_2
-  - right_north_2
+  - conn_right_east_to_south
+  - conn_right_east_to_north
 - id: connector_east_west
   kind: connector
   centerline:
   - - 1.10172
-    - 0.785571
-  - - 0.98043
-    - 0.785571
-  - - 0.85914
     - 0.785571
   - - 0.77828
     - 0.785571
@@ -263,10 +249,8 @@ lanes:
   centerline:
   - - 1.10172
     - 0.785571
-  - - 1.071398
-    - 0.805714
-  - - 1.041075
-    - 0.835929
+  - - 1.031551
+    - 0.802596
   - - 1.02086
     - 0.866143
   successors:
@@ -276,10 +260,8 @@ lanes:
   centerline:
   - - 1.10172
     - 0.785571
-  - - 1.000645
-    - 0.755357
-  - - 0.919785
-    - 0.684857
+  - - 0.936452
+    - 0.696762
   - - 0.85914
     - 0.543857
   successors:
@@ -290,10 +272,6 @@ lanes:
   - - 1.02086
     - 0.543857
   - - 1.02086
-    - 0.664714
-  - - 1.02086
-    - 0.785571
-  - - 1.02086
     - 0.866143
   successors:
   - center_to_north
@@ -302,10 +280,8 @@ lanes:
   centerline:
   - - 1.02086
     - 0.543857
-  - - 1.041075
-    - 0.574071
-  - - 1.071398
-    - 0.604286
+  - - 1.033303
+    - 0.611429
   - - 1.10172
     - 0.624429
   successors:
@@ -315,10 +291,8 @@ lanes:
   centerline:
   - - 1.02086
     - 0.543857
-  - - 0.960215
-    - 0.604286
-  - - 0.85914
-    - 0.684857
+  - - 0.937711
+    - 0.696762
   - - 0.77828
     - 0.785571
   successors:
@@ -327,10 +301,6 @@ lanes:
   kind: connector
   centerline:
   - - 0.77828
-    - 0.624429
-  - - 0.89957
-    - 0.624429
-  - - 1.02086
     - 0.624429
   - - 1.10172
     - 0.624429
@@ -341,10 +311,8 @@ lanes:
   centerline:
   - - 0.77828
     - 0.624429
-  - - 0.838925
-    - 0.684857
   - - 0.94
-    - 0.765429
+    - 0.701143
   - - 1.02086
     - 0.866143
   successors:
@@ -354,10 +322,8 @@ lanes:
   centerline:
   - - 0.77828
     - 0.624429
-  - - 0.808602
-    - 0.604286
-  - - 0.838925
-    - 0.574071
+  - - 0.85083
+    - 0.616928
   - - 0.85914
     - 0.543857
   successors:
@@ -368,10 +334,6 @@ lanes:
   - - 0.85914
     - 0.866143
   - - 0.85914
-    - 0.745286
-  - - 0.85914
-    - 0.624429
-  - - 0.85914
     - 0.543857
   successors:
   - center_to_south
@@ -380,10 +342,8 @@ lanes:
   centerline:
   - - 0.85914
     - 0.866143
-  - - 0.94
-    - 0.765429
-  - - 1.041075
-    - 0.684857
+  - - 0.938694
+    - 0.699143
   - - 1.10172
     - 0.624429
   successors:
@@ -393,10 +353,8 @@ lanes:
   centerline:
   - - 0.85914
     - 0.866143
-  - - 0.838925
-    - 0.835929
-  - - 0.808602
-    - 0.805714
+  - - 0.851459
+    - 0.798571
   - - 0.77828
     - 0.785571
   successors:
@@ -406,18 +364,10 @@ lanes:
   centerline:
   - - 0.252688
     - 1.037357
-  - - 0.25572
-    - 1.06455
   - - 0.264817
     - 1.089729
-  - - 0.278968
-    - 1.112893
-  - - 0.298172
-    - 1.132029
   - - 0.321419
     - 1.146129
-  - - 0.346688
-    - 1.155193
   - - 0.373978
     - 1.158214
   successors:
@@ -427,18 +377,10 @@ lanes:
   centerline:
   - - 0.373978
     - 1.319357
-  - - 0.311312
-    - 1.312307
   - - 0.251677
     - 1.291157
-  - - 0.197097
-    - 1.257921
-  - - 0.152624
-    - 1.213607
   - - 0.119269
     - 1.159221
-  - - 0.098043
-    - 1.0998
   - - 0.090968
     - 1.037357
   successors:
@@ -448,18 +390,10 @@ lanes:
   centerline:
   - - 1.470645
     - 1.158214
-  - - 1.505011
-    - 1.154186
   - - 1.538366
     - 1.143107
-  - - 1.568688
-    - 1.123971
-  - - 1.592946
-    - 1.0998
   - - 1.612151
     - 1.069586
-  - - 1.623269
-    - 1.03635
   - - 1.627312
     - 1.002107
   successors:
@@ -469,18 +403,10 @@ lanes:
   centerline:
   - - 1.789032
     - 1.002107
-  - - 1.780946
-    - 1.072607
   - - 1.757699
     - 1.140086
-  - - 1.71929
-    - 1.199507
-  - - 1.668753
-    - 1.249864
   - - 1.609118
     - 1.288136
-  - - 1.541398
-    - 1.3113
   - - 1.470645
     - 1.319357
   successors:
@@ -490,18 +416,10 @@ lanes:
   centerline:
   - - 1.627312
     - 0.483429
-  - - 1.621247
-    - 0.432064
   - - 1.604065
     - 0.382714
-  - - 1.576774
-    - 0.339407
-  - - 1.539376
-    - 0.302143
   - - 1.495914
     - 0.27495
-  - - 1.446387
-    - 0.257829
   - - 1.394839
     - 0.251786
   successors:
@@ -511,18 +429,10 @@ lanes:
   centerline:
   - - 1.394839
     - 0.090643
-  - - 1.482774
-    - 0.100714
   - - 1.565656
     - 0.129921
-  - - 1.640452
-    - 0.17625
-  - - 1.703118
-    - 0.238693
   - - 1.749613
     - 0.313221
-  - - 1.778925
-    - 0.395807
   - - 1.789032
     - 0.483429
   successors:
@@ -532,18 +442,10 @@ lanes:
   centerline:
   - - 0.298172
     - 0.251786
-  - - 0.288065
-    - 0.252793
   - - 0.277957
     - 0.255814
-  - - 0.269871
-    - 0.261857
-  - - 0.262796
-    - 0.268907
   - - 0.256731
     - 0.276964
-  - - 0.253699
-    - 0.287036
   - - 0.252688
     - 0.297107
   successors:
@@ -553,19 +455,259 @@ lanes:
   centerline:
   - - 0.090968
     - 0.297107
-  - - 0.096022
-    - 0.250779
   - - 0.111183
     - 0.207471
-  - - 0.136452
-    - 0.168193
-  - - 0.168796
-    - 0.135964
   - - 0.208215
     - 0.110786
-  - - 0.251677
-    - 0.095679
   - - 0.298172
     - 0.090643
   successors:
   - bottom_east_1
+- id: conn_top_east_straight
+  kind: connector
+  centerline:
+  - - 0.77828
+    - 1.158214
+  - - 1.10172
+    - 1.158214
+  successors:
+  - top_east_2
+- id: conn_top_east_to_south
+  kind: connector
+  centerline:
+  - - 0.77828
+    - 1.158214
+  - - 0.838925
+    - 1.128
+  - - 0.85914
+    - 1.037357
+  successors:
+  - north_to_center
+- id: conn_top_west_straight
+  kind: connector
+  centerline:
+  - - 1.10172
+    - 1.319357
+  - - 0.77828
+    - 1.319357
+  successors:
+  - top_west_2
+- id: conn_top_west_to_south
+  kind: connector
+  centerline:
+  - - 1.10172
+    - 1.319357
+  - - 0.919785
+    - 1.248857
+  - - 0.85914
+    - 1.037357
+  successors:
+  - north_to_center
+- id: conn_top_north_to_east
+  kind: connector
+  centerline:
+  - - 1.02086
+    - 1.037357
+  - - 1.041075
+    - 1.128
+  - - 1.10172
+    - 1.158214
+  successors:
+  - top_east_2
+- id: conn_top_north_to_west
+  kind: connector
+  centerline:
+  - - 1.02086
+    - 1.037357
+  - - 0.960215
+    - 1.248857
+  - - 0.77828
+    - 1.319357
+  successors:
+  - top_west_2
+- id: conn_bot_west_straight
+  kind: connector
+  centerline:
+  - - 1.10172
+    - 0.251786
+  - - 0.77828
+    - 0.251786
+  successors:
+  - bottom_west_2
+- id: conn_bot_west_to_north
+  kind: connector
+  centerline:
+  - - 1.10172
+    - 0.251786
+  - - 1.041075
+    - 0.271929
+  - - 1.02086
+    - 0.332357
+  successors:
+  - south_to_center
+- id: conn_bot_east_straight
+  kind: connector
+  centerline:
+  - - 0.77828
+    - 0.090643
+  - - 1.10172
+    - 0.090643
+  successors:
+  - bottom_east_2
+- id: conn_bot_east_to_north
+  kind: connector
+  centerline:
+  - - 0.77828
+    - 0.090643
+  - - 0.960215
+    - 0.151071
+  - - 1.02086
+    - 0.332357
+  successors:
+  - south_to_center
+- id: conn_bot_south_to_west
+  kind: connector
+  centerline:
+  - - 0.85914
+    - 0.332357
+  - - 0.838925
+    - 0.271929
+  - - 0.77828
+    - 0.251786
+  successors:
+  - bottom_west_2
+- id: conn_bot_south_to_east
+  kind: connector
+  centerline:
+  - - 0.85914
+    - 0.332357
+  - - 0.919785
+    - 0.151072
+  - - 1.10172
+    - 0.090643
+  successors:
+  - bottom_east_2
+- id: conn_left_south_straight
+  kind: connector
+  centerline:
+  - - 0.090968
+    - 0.866143
+  - - 0.090968
+    - 0.543857
+  successors:
+  - left_south_2
+- id: conn_left_south_to_east
+  kind: connector
+  centerline:
+  - - 0.090968
+    - 0.866143
+  - - 0.171828
+    - 0.684858
+  - - 0.414409
+    - 0.624429
+  successors:
+  - west_to_center
+- id: conn_left_north_straight
+  kind: connector
+  centerline:
+  - - 0.252688
+    - 0.543857
+  - - 0.252688
+    - 0.866143
+  successors:
+  - left_north_2
+- id: conn_left_north_to_east
+  kind: connector
+  centerline:
+  - - 0.252688
+    - 0.543857
+  - - 0.293118
+    - 0.604286
+  - - 0.414409
+    - 0.624429
+  successors:
+  - west_to_center
+- id: conn_left_west_to_north
+  kind: connector
+  centerline:
+  - - 0.414409
+    - 0.785571
+  - - 0.293118
+    - 0.805714
+  - - 0.252688
+    - 0.866143
+  successors:
+  - left_north_2
+- id: conn_left_west_to_south
+  kind: connector
+  centerline:
+  - - 0.414409
+    - 0.785571
+  - - 0.171828
+    - 0.725143
+  - - 0.090968
+    - 0.543857
+  successors:
+  - left_south_2
+- id: conn_right_north_straight
+  kind: connector
+  centerline:
+  - - 1.789032
+    - 0.543857
+  - - 1.789032
+    - 0.866143
+  successors:
+  - right_north_2
+- id: conn_right_north_to_west
+  kind: connector
+  centerline:
+  - - 1.789032
+    - 0.543857
+  - - 1.708172
+    - 0.725143
+  - - 1.465591
+    - 0.785571
+  successors:
+  - east_to_center
+- id: conn_right_south_straight
+  kind: connector
+  centerline:
+  - - 1.627312
+    - 0.866143
+  - - 1.627312
+    - 0.543857
+  successors:
+  - right_south_2
+- id: conn_right_south_to_west
+  kind: connector
+  centerline:
+  - - 1.627312
+    - 0.866143
+  - - 1.586882
+    - 0.805714
+  - - 1.465591
+    - 0.785571
+  successors:
+  - east_to_center
+- id: conn_right_east_to_south
+  kind: connector
+  centerline:
+  - - 1.465591
+    - 0.624429
+  - - 1.586882
+    - 0.604286
+  - - 1.627312
+    - 0.543857
+  successors:
+  - right_south_2
+- id: conn_right_east_to_north
+  kind: connector
+  centerline:
+  - - 1.465591
+    - 0.624429
+  - - 1.708172
+    - 0.684858
+  - - 1.789032
+    - 0.866143
+  successors:
+  - right_north_2
