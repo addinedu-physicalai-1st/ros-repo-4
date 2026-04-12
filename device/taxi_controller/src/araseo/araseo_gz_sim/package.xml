@@ -11,7 +11,10 @@
 
   <depend>ros_gz</depend>
   <depend>gz_ros2_control</depend>
+  <depend>geometry_msgs</depend>
+  <depend>gps_field_msgs</depend>
   <depend>pinky_bringup</depend>
+  <depend>rclpy</depend>
 
   <test_depend>ament_lint_auto</test_depend>
   <test_depend>ament_lint_common</test_depend>

@@ -12,6 +12,8 @@ from rclpy.time import Time
 from tf2_ros import TransformBroadcaster
 from tf_transformations import euler_from_quaternion, quaternion_from_euler
 
+from gps_field_msgs.msg import PinkyGps
+
 
 @dataclass
 class Pose2D:
@@ -59,7 +61,7 @@ class GpsOdometryCalibrator(Node):
         super().__init__("gps_odometry_calibrator")
 
         self.declare_parameter("raw_odom_topic", "odom/raw")
-        self.declare_parameter("gps_topic", "gps/pose")
+        self.declare_parameter("pinky_id", 0 & 0xFF)
         self.declare_parameter("map_frame_id", "map")
         self.declare_parameter("odom_frame_id", "odom")
         self.declare_parameter("base_frame_id", "base_footprint")
@@ -68,7 +70,9 @@ class GpsOdometryCalibrator(Node):
         self.declare_parameter("translation_smoothing_gain", 0.35)
 
         raw_odom_topic = self.get_parameter("raw_odom_topic").value
-        gps_topic = self.get_parameter("gps_topic").value
+        pinky_id = self.get_parameter("pinky_id").value
+        gps_topic = f"/pinky_{pinky_id}/gps_pos"
+
         self.map_frame_id = self.get_parameter("map_frame_id").value
         self.odom_frame_id = self.get_parameter("odom_frame_id").value
         self.base_frame_id = self.get_parameter("base_frame_id").value
@@ -79,7 +83,7 @@ class GpsOdometryCalibrator(Node):
         )
 
         self.latest_raw_odom: Optional[Odometry] = None
-        self.latest_gps_pose: Optional[PoseStamped] = None
+        self.latest_gps_pose: Optional[PinkyGps] = None
         self.map_to_odom: Optional[Pose2D] = None
         self.initialized = False
         self.last_gps_stamp = None
@@ -91,7 +95,7 @@ class GpsOdometryCalibrator(Node):
             10,
         )
         self.gps_sub = self.create_subscription(
-            PoseStamped,
+            PinkyGps,
             gps_topic,
             self.gps_callback,
             10,
@@ -101,7 +105,7 @@ class GpsOdometryCalibrator(Node):
 
         self.get_logger().info(
             f"GPS odometry calibrator started. raw_odom='{raw_odom_topic}', "
-            f"gps='{gps_topic}', map_frame='{self.map_frame_id}', "
+            f"gps='{gps_topic}', pinky_id={pinky_id}, map_frame='{self.map_frame_id}', "
             f"odom_frame='{self.odom_frame_id}', "
             f"period={correction_period_sec:.1f}s"
         )
@@ -111,7 +115,9 @@ class GpsOdometryCalibrator(Node):
         if self.initialized:
             self.publish_map_to_odom_tf(msg.header.stamp)
 
-    def gps_callback(self, msg: PoseStamped) -> None:
+    def gps_callback(self, msg: PinkyGps) -> None:
+        if not msg.is_valid:
+            return
         self.latest_gps_pose = msg
         self.last_gps_stamp = Time.from_msg(msg.header.stamp)
 
@@ -162,9 +168,10 @@ class GpsOdometryCalibrator(Node):
 
     def get_latest_gps_pose(self) -> Pose2D:
         assert self.latest_gps_pose is not None
-        return pose_to_2d(
-            self.latest_gps_pose.pose.position,
-            self.latest_gps_pose.pose.orientation,
+        return Pose2D(
+            x=self.latest_gps_pose.x_mm / 1000.0,
+            y=self.latest_gps_pose.y_mm / 1000.0,
+            yaw=math.radians(self.latest_gps_pose.yaw_deg),
         )
 
     def compute_target_translation(self, raw_pose: Pose2D, gps_pose: Pose2D, map_to_odom_yaw: float) -> Pose2D:

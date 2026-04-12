@@ -37,6 +37,12 @@ install(
 )
 
 install(
+  PROGRAMS
+    scripts/gazebo_gps_publisher.py
+  DESTINATION lib/${PROJECT_NAME}
+)
+
+install(
   TARGETS
   gz-sim-lamp-control-system
   DESTINATION
