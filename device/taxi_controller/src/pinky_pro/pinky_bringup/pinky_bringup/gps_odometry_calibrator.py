@@ -75,6 +75,7 @@ class GpsOdometryCalibrator(Node):
         self.declare_parameter("base_frame_id", "base_footprint")
         self.declare_parameter("correction_period_sec", 2.0)
         self.declare_parameter("gps_timeout_sec", 5.0)
+        self.declare_parameter("gps_min_confidence", 90)
         self.declare_parameter("translation_smoothing_gain", 0.35)
         self.declare_parameter("yaw_smoothing_gain", 0.35)
 
@@ -87,6 +88,7 @@ class GpsOdometryCalibrator(Node):
         self.base_frame_id = self.get_parameter("base_frame_id").value
         correction_period_sec = float(self.get_parameter("correction_period_sec").value)
         self.gps_timeout_sec = float(self.get_parameter("gps_timeout_sec").value)
+        self.gps_min_confidence = float(self.get_parameter("gps_min_confidence").value)
         self.translation_smoothing_gain = float(
             self.get_parameter("translation_smoothing_gain").value
         )
@@ -128,7 +130,7 @@ class GpsOdometryCalibrator(Node):
             self.publish_map_to_odom_tf(msg.header.stamp)
 
     def gps_callback(self, msg: PinkyGps) -> None:
-        if not msg.is_valid:
+        if not msg.is_valid or msg.confidence < self.gps_min_confidence:
             return
         self.latest_gps_pose = msg
         self.last_gps_stamp = Time.from_msg(msg.header.stamp)

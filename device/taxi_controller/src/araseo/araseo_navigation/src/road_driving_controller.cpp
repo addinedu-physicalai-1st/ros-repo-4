@@ -399,7 +399,10 @@ nav_msgs::msg::Path RoadDrivingController::transformPlanToFrame(const std::strin
   transformed_plan.header.frame_id = target_frame;
   transformed_plan.poses.reserve(global_plan_.poses.size());
 
-  for (const auto & pose : global_plan_.poses) {
+  for (auto pose : global_plan_.poses) {
+    // The global plan is a static geometric path, so per-pose timestamps should not
+    // force historical TF lookups during control. Use the latest available transform.
+    pose.header.stamp = rclcpp::Time(0, 0, RCL_ROS_TIME);
     transformed_plan.poses.push_back(transformPoseToFrame(pose, target_frame));
   }
 

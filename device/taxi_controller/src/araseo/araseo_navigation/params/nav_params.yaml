@@ -25,8 +25,8 @@ controller_server:
     enable_stamped_cmd_vel: false
     progress_checker:
       plugin: "nav2_controller::SimpleProgressChecker"
-      required_movement_radius: 0.2
-      movement_time_allowance: 10.0
+      required_movement_radius: 0.05
+      movement_time_allowance: 15.0
     general_goal_checker:
       stateful: True
       plugin: "nav2_controller::SimpleGoalChecker"
@@ -34,11 +34,11 @@ controller_server:
       yaw_goal_tolerance: 0.10
     FollowPath:
       plugin: "araseo_navigation::RoadDrivingController"
-      desired_linear_vel: 0.10
-      max_linear_vel: 0.15
-      min_linear_vel: 0.03
-      max_angular_vel: 0.40
-      lookahead_dist: 0.40
+      desired_linear_vel: 0.05
+      max_linear_vel: 0.08
+      min_linear_vel: 0.02
+      max_angular_vel: 0.30
+      lookahead_dist: 0.30
       yaw_gain: 1.2
       heading_error_slowdown_threshold: 0.30
       goal_dist_tolerance: 0.10
