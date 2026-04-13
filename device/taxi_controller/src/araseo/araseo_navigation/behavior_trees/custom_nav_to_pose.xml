@@ -1,26 +1,29 @@
 
-<!--
-  This Behavior Tree computes the global path once at navigation start and then
-  follows that path until the goal is reached or a recovery is required.
--->
 <root BTCPP_format="4" main_tree_to_execute="MainTree">
   <BehaviorTree ID="MainTree">
-    <RecoveryNode number_of_retries="2" name="NavigateRecovery">
-      <Sequence name="NavigateWithSinglePlanning">
+    <RecoveryNode number_of_retries="4" name="NavigateRecovery">
+      <PipelineSequence name="NavigateWithRouteTracking">
         <ControllerSelector selected_controller="{selected_controller}" default_controller="FollowPath" topic_name="controller_selector"/>
-        <PlannerSelector selected_planner="{selected_planner}" default_planner="LaneGraph" topic_name="planner_selector"/>
-
-        <ComputePathToPose goal="{goal}" path="{path}" planner_id="{selected_planner}" error_code_id="{compute_path_error_code}"/>
-
+        <RateController hz="1.0">
+          <ComputeAndTrackRoute
+            goal="{goal}"
+            use_poses="true"
+            use_start="false"
+            path="{path}"
+            route="{route}"
+            rerouted="{rerouted}"
+            error_code_id="{compute_route_error_code}"/>
+        </RateController>
         <FollowPath path="{path}" controller_id="{selected_controller}" error_code_id="{follow_path_error_code}"/>
-      </Sequence>
+      </PipelineSequence>
 
       <Sequence>
         <ReactiveFallback name="RecoveryFallback">
           <GoalUpdated/>
           <RoundRobin name="RecoveryActions">
             <Wait wait_duration="2.0"/>
-            <ComputePathToPose goal="{goal}" path="{path}" planner_id="{selected_planner}" error_code_id="{compute_path_error_code}"/>
+            <ClearEntireCostmap name="ClearLocalCostmap" service_name="local_costmap/clear_entirely_local_costmap"/>
+            <ClearEntireCostmap name="ClearGlobalCostmap" service_name="global_costmap/clear_entirely_global_costmap"/>
           </RoundRobin>
         </ReactiveFallback>
       </Sequence>

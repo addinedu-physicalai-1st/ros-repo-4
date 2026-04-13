@@ -75,7 +75,7 @@ class GazeboGpsPublisher(Node):
         )
 
         gps_msg = PinkyGps()
-        gps_msg.header = msg.header
+        gps_msg.header.stamp = self.get_clock().now().to_msg()
         gps_msg.header.frame_id = self.frame_id
         gps_msg.pinky_id = self.pinky_id
         gps_msg.x_mm = x_mm

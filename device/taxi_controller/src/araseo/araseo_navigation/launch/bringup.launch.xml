@@ -4,22 +4,17 @@
      <log message="araseo_navigation share: $(find-pkg-share araseo_navigation)"/>
 
     <arg name="namespace" default=""/>
-    <arg name="use_sim_time" default="false"/>
+    <arg name="use_sim_time" default="true"/>
     <arg name="params_file" default="$(find-pkg-share araseo_navigation)/params/nav_params.yaml"/>
     <arg name="bt_xml_file" default="$(find-pkg-share araseo_navigation)/behavior_trees/custom_nav_to_pose.xml"/>
-    <arg name="lane_graph_file" default="$(find-pkg-share araseo_navigation)/params/lane_graph.yaml"/>
+    <arg name="route_graph_file" default="$(find-pkg-share araseo_navigation)/params/route_graph.geojson"/>
+    <arg name="stations_file" default="$(find-pkg-share araseo_navigation)/params/stations.yaml"/>
     <arg name="autostart" default="True"/>
     <arg name="container_name" default="nav2_container"/>
     <arg name="use_composition" default="False"/>
     <arg name="use_respawn" default="False"/>
     <arg name="log_level" default="info"/>
-    <arg name="lifecycle_nodes_nav" default="['controller_server',
-                       'smoother_server',
-                       'planner_server',
-                       'behavior_server',
-                       'bt_navigator',
-                       'waypoint_follower',
-                       'velocity_smoother']"/>
+    <arg name="lifecycle_nodes_nav" default="['controller_server', 'smoother_server', 'route_server', 'behavior_server', 'bt_navigator', 'waypoint_follower', 'velocity_smoother']"/>
 
     <group>
         <push-ros-namespace namespace="$(var namespace)"/>
@@ -27,7 +22,7 @@
         <node pkg="rclcpp_components" exec="component_container_isolated" name='$(var container_name)' output="screen" args="--ros-args --log-level $(var log_level)" if="$(var use_composition)">
             <param from="$(var params_file)"/>
             <param name='autostart' value="$(var autostart)"/>
-            <param name='use_sim_time' value="$(var use_sim_time)"/>
+            <param name='use_sim_time' value="$(var use_sim_time)" type="bool"/>
             <remap from="/tf" to="tf"/>
             <remap from="/tf_static" to="tf_static"/>
         </node>
@@ -35,7 +30,8 @@
         <include file="$(find-pkg-share araseo_navigation)/launch/navigation_launch.xml">
             <arg name="params_file" value="$(var params_file)"/>
             <arg name="bt_xml_file" value="$(var bt_xml_file)"/>
-            <arg name="lane_graph_file" value="$(var lane_graph_file)"/>
+            <arg name="route_graph_file" value="$(var route_graph_file)"/>
+            <arg name="stations_file" value="$(var stations_file)"/>
             <arg name="use_sim_time" value="$(var use_sim_time)"/>
             <arg name="autostart" value="$(var autostart)"/>
             <arg name="use_composition" value="$(var use_composition)"/>

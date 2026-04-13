@@ -6,7 +6,7 @@
     <arg name="wheel_separation" default="0.0961"/>
 
     <include file="$(find-pkg-share pinky_description)/launch/upload_robot.launch.py">
-        <arg name="use_sim_time" value="$(var use_sim_time)"/>
+        <arg name="is_sim" value="$(var use_sim_time)"/>
     </include>
 
     <include file="$(find-pkg-share sllidar_ros2)/launch/sllidar_c1_launch.py">
@@ -21,6 +21,7 @@
         <param from="$(find-pkg-share pinky_bringup)/config/pinky_params.yaml"/>
         <param name="wheel_radius" value="$(var wheel_radius)"/>
         <param name="wheel_separation" value="$(var wheel_separation)"/>
+        <param name="use_sim_time" value="$(var use_sim_time)"/>
     </node>
     
     <node pkg="pinky_bringup" exec="battery_publisher">
@@ -28,6 +29,7 @@
 
     <node pkg="pinky_bringup" exec="gps_odometry_calibrator">
         <param from="$(find-pkg-share pinky_bringup)/config/pinky_params.yaml"/>
+        <param name="use_sim_time" value="$(var use_sim_time)"/>
     </node>
     
 </launch>

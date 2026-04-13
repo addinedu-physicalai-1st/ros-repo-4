@@ -3,6 +3,7 @@
 <launch>
     <arg name="namespace" default=""/>
     <arg name="robot_name" default="$(var namespace)pinky"/>
+    <arg name="use_sim_time" default="True"/>
     <arg name="cam_tilt_deg" default="25"/>
     <arg name="bridge_params" default="$(find-pkg-share araseo_gz_sim)/params/pinky_bridge.yaml"/>
     <arg name="pinky_params" default="$(find-pkg-share pinky_bringup)/config/pinky_params.yaml"/>
@@ -21,29 +22,34 @@
 
     <include file="$(find-pkg-share pinky_description)/launch/upload_robot.launch.py">
         <arg name='namespace' value='$(var namespace)'/>
-        <arg name='use_sim_time' value='True'/>
-        <arg name='is_sim' value='True'/>
+        <arg name='is_sim' value='$(var use_sim_time)'/>
         <arg name='cam_tilt_deg' value='$(var cam_tilt_deg)'/>
     </include>
 
     <node pkg="ros_gz_sim" exec="create" name='create' output='screen'
             args="-name $(var robot_name) -topic $(var namespace)/robot_description -x $(var spawn_x) -y $(var spawn_y) -z $(var spawn_z) -Y $(var spawn_yaw)">
-        <param name='use_sim_time' value='True'/>
+        <param name='use_sim_time' value='$(var use_sim_time)' type='bool'/>
     </node>
 
-    <node pkg="ros_gz_bridge" exec="parameter_bridge" name='parameter_bridge' output='screen' args="--ros-args -p config_file:=$(var bridge_params)"/>
+    <node pkg="ros_gz_bridge" exec="parameter_bridge" name='parameter_bridge' output='screen' args="--ros-args -p config_file:=$(var bridge_params)">
+        <param name='use_sim_time' value='$(var use_sim_time)' type='bool'/>
+    </node>
     <node pkg="ros_gz_bridge" exec="parameter_bridge" name='gps_pose_bridge' output='screen' args="/model/$(var robot_name)/pose@geometry_msgs/msg/PoseStamped[gz.msgs.Pose">
-        <param name='use_sim_time' value='True'/>
+        <param name='use_sim_time' value='$(var use_sim_time)' type='bool'/>
         <remap from="/model/$(var robot_name)/pose" to="gazebo/pose"/>
     </node>
     <node pkg="araseo_gz_sim" exec="gazebo_gps_publisher.py" name="gazebo_gps_publisher" output="screen">
-        <param name='use_sim_time' value='True'/>
+        <param name='use_sim_time' value='$(var use_sim_time)' type='bool'/>
         <param from="$(var pinky_params)"/>
     </node>
     <node pkg="pinky_bringup" exec="gps_odometry_calibrator" name='gps_odometry_calibrator' output='screen'>
-        <param name='use_sim_time' value='True'/>
+        <param name='use_sim_time' value='$(var use_sim_time)' type='bool'/>
         <param from="$(var pinky_params)"/>
     </node>
-    <node pkg="ros_gz_image" exec="image_bridge" name='image_bridge' output='screen' args="/camera/image_raw"/>
-    <node pkg="ros_gz_image" exec="image_bridge" name='image_bridge' output='screen' args="/camera"/>
+    <node pkg="ros_gz_image" exec="image_bridge" name='image_bridge_raw' output='screen' args="/camera/image_raw">
+        <param name='use_sim_time' value='$(var use_sim_time)' type='bool'/>
+    </node>
+    <node pkg="ros_gz_image" exec="image_bridge" name='image_bridge' output='screen' args="/camera">
+        <param name='use_sim_time' value='$(var use_sim_time)' type='bool'/>
+    </node>
 </launch>
