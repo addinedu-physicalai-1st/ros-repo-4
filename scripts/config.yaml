@@ -2,12 +2,17 @@ remote:
   user: pinky
   host: 192.168.104.54
   port: 22
+  password: "1"
 
 packages:
   - name: araseo_navigation
     input_path: device/taxi_controller/src/araseo/araseo_navigation
     output_path: /home/pinky/pinky_pro/src/araseo/araseo_navigation
 
+  - name: pinky_pro
+    input_path: device/taxi_controller/src/pinky_pro
+    output_path: /home/pinky/pinky_pro/src/pinky_pro
+
   - name: gps_field_msgs
-    input_path: server/gps_service/GPSTopicTest/src/gps_field_msgs
+    input_path: server/gps_service/src/gps_field_msgs
     output_path: /home/pinky/pinky_pro/src/gps_field_msgs

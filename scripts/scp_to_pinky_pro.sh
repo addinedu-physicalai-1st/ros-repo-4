@@ -2,45 +2,25 @@
 
 set -euo pipefail
 
-# BASH_SOURCE[0] is the current script file.
-# dirname gets its folder, and cd && pwd converts it to an absolute path.
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
-LOCAL_SRC_DIR="${PROJECT_ROOT}"
+CONFIG_PATH="${SCRIPT_DIR}/config.yaml"
 
-# These defaults match the command you said you usually use:
-#   ssh pinky@192.168.4.1
-REMOTE_USER="${REMOTE_USER:-pinky}"
-REMOTE_HOST="${REMOTE_HOST:-192.168.104.54}"
-REMOTE_PORT="${REMOTE_PORT:-22}"
-REMOTE_SRC_DIR="${REMOTE_SRC_DIR:-/home/${REMOTE_USER}/pinky_pro/src}"
-
-# Arrays in bash can store multiple values safely.
 DRY_RUN=0
-PACKAGE_PATHS=()
 
-# function_name() { ... } defines a bash function.
-# Think of it like a small reusable command block.
 usage() {
   cat <<EOF
 Usage:
   $(basename "$0")
-  $(basename "$0") --package pinky_pro/pinky_bringup
-  $(basename "$0") --package araseo/araseo_navigation --package pinky_pro/pinky_description
-  $(basename "$0") --dry-run --package araseo/araseo_controller
+  $(basename "$0") --dry-run
 
 Description:
-  Copy ROS2 packages from device/taxi_controller/src to the pinky_pro robot with scp.
+  Read ${CONFIG_PATH} and copy the configured files/directories to the pinky_pro robot with scp.
+  The remote password is also read from config.yaml and passed through sshpass.
 
 Options:
-  --package REL_PATH  Package path relative to taxi_controller/src.
-                      Example: araseo/araseo_navigation
-  --dry-run           Print commands without executing them
-  -h, --help          Show this help
-
-Behavior:
-  If --package is omitted, the whole src directory is copied.
-  If --package is used, each package keeps its path under src on the remote side.
+  --dry-run   Print commands without executing them
+  -h, --help  Show this help
 EOF
 }
 
@@ -53,20 +33,6 @@ fail() {
   exit 1
 }
 
-# Validate a package path and return it unchanged if it exists.
-# This script now accepts only relative paths under src, not absolute paths.
-resolve_package_path() {
-  local relative_path="$1"
-  local full_path="${LOCAL_SRC_DIR}/${relative_path}"
-
-  [[ "${relative_path}" != /* ]] || fail "Use a relative path for --package, not an absolute path: ${relative_path}"
-  [[ -n "${relative_path}" ]] || fail "--package requires a value"
-  [[ -d "${full_path}" ]] || fail "Package path not found: ${relative_path}"
-
-  printf '%s\n' "${relative_path}"
-}
-
-# Run the command normally, or just print it when --dry-run is used.
 run_cmd() {
   if [[ "${DRY_RUN}" -eq 1 ]]; then
     printf '[dry-run] '
@@ -78,13 +44,34 @@ run_cmd() {
   "$@"
 }
 
+run_remote_cmd() {
+  if [[ "${DRY_RUN}" -eq 1 ]]; then
+    printf '[dry-run] '
+    printf '%q ' "${SSH_CMD[@]}"
+    printf '%q' "$1"
+    printf '\n'
+    return 0
+  fi
+
+  SSHPASS="${REMOTE_PASSWORD}" sshpass -e "${SSH_CMD[@]}" "$1"
+}
+
+run_copy_cmd() {
+  local local_path="$1"
+  local remote_dest="$2"
+
+  if [[ "${DRY_RUN}" -eq 1 ]]; then
+    printf '[dry-run] '
+    printf '%q ' "${RSYNC_CMD[@]}" "${EXCLUDES[@]}" "${local_path}" "${remote_dest}"
+    printf '\n'
+    return 0
+  fi
+
+  SSHPASS="${REMOTE_PASSWORD}" sshpass -e "${RSYNC_CMD[@]}" "${EXCLUDES[@]}" "${local_path}" "${remote_dest}"
+}
+
 while [[ $# -gt 0 ]]; do
   case "$1" in
-    --package)
-      [[ $# -ge 2 ]] || fail "--package requires a value"
-      PACKAGE_PATHS+=("$(resolve_package_path "$2")")
-      shift 2
-      ;;
     --dry-run)
       DRY_RUN=1
       shift
@@ -99,36 +86,121 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-[[ -d "${LOCAL_SRC_DIR}" ]] || fail "Local src directory not found: ${LOCAL_SRC_DIR}"
+[[ -f "${CONFIG_PATH}" ]] || fail "Config file not found: ${CONFIG_PATH}"
+
+CONFIG_LINES="$(python3 - "${CONFIG_PATH}" "${PROJECT_ROOT}" <<'PY'
+import sys
+from pathlib import Path
+
+try:
+    import yaml
+except ModuleNotFoundError as exc:
+    raise SystemExit(f"PyYAML is required to read config.yaml: {exc}")
+
+config_path = Path(sys.argv[1])
+project_root = Path(sys.argv[2]).resolve()
+
+data = yaml.safe_load(config_path.read_text()) or {}
+remote = data.get("remote") or {}
+packages = data.get("packages") or []
+
+user = remote.get("user")
+host = remote.get("host")
+port = remote.get("port")
+password = remote.get("password")
+
+if not user:
+    raise SystemExit("config.yaml: remote.user is required")
+if not host:
+    raise SystemExit("config.yaml: remote.host is required")
+if port is None:
+    raise SystemExit("config.yaml: remote.port is required")
+if password is None:
+    raise SystemExit("config.yaml: remote.password is required")
+if not isinstance(packages, list) or not packages:
+    raise SystemExit("config.yaml: packages must contain at least one entry")
+
+print(f"REMOTE_USER={user}")
+print(f"REMOTE_HOST={host}")
+print(f"REMOTE_PORT={port}")
+print(f"REMOTE_PASSWORD={password!r}")
+
+for index, pkg in enumerate(packages, start=1):
+    if not isinstance(pkg, dict):
+        raise SystemExit(f"config.yaml: packages[{index}] must be a mapping")
+
+    name = pkg.get("name") or f"package_{index}"
+    input_path_raw = pkg.get("input_path")
+    output_path = pkg.get("output_path")
+
+    if not input_path_raw:
+      raise SystemExit(f"config.yaml: packages[{index}].input_path is required")
+    if not output_path:
+      raise SystemExit(f"config.yaml: packages[{index}].output_path is required")
+    if not str(output_path).startswith("/"):
+      raise SystemExit(f"config.yaml: packages[{index}].output_path must be an absolute path")
+
+    input_path = (project_root / str(input_path_raw)).resolve()
+    try:
+        input_path.relative_to(project_root)
+    except ValueError:
+        raise SystemExit(
+            f"config.yaml: packages[{index}].input_path must stay inside the project: {input_path_raw}"
+        )
+
+    if not input_path.exists():
+        raise SystemExit(f"config.yaml: input_path not found: {input_path_raw}")
+
+    print(f"PACKAGE_NAME[{index}]={name}")
+    print(f"PACKAGE_INPUT[{index}]={input_path}")
+    print(f"PACKAGE_OUTPUT[{index}]={output_path}")
+PY
+)" || fail "Failed to parse ${CONFIG_PATH}"
+
+eval "${CONFIG_LINES}"
 
 REMOTE="${REMOTE_USER}@${REMOTE_HOST}"
-SSH_CMD=(ssh -p "${REMOTE_PORT}" "${REMOTE}")
-SCP_CMD=(scp -P "${REMOTE_PORT}" -r)
 
-log "Local source root: ${LOCAL_SRC_DIR}"
-log "Remote source root: ${REMOTE}:${REMOTE_SRC_DIR}"
-
-if [[ "${#PACKAGE_PATHS[@]}" -eq 0 ]]; then
-  log "Copying whole src directory"
-  run_cmd "${SSH_CMD[@]}" "mkdir -p '${REMOTE_SRC_DIR%/*}'"
-  run_cmd "${SCP_CMD[@]}" "${LOCAL_SRC_DIR}" "${REMOTE}:${REMOTE_SRC_DIR%/*}/"
-  log "Transfer complete."
-  exit 0
+if [[ "${DRY_RUN}" -ne 1 ]]; then
+  command -v sshpass >/dev/null 2>&1 || fail "sshpass is required for password-based transfer"
+  command -v rsync >/dev/null 2>&1 || fail "rsync is required for optimized transfer"
 fi
 
-# Copy each selected package to the matching parent directory on the robot.
-# Example:
-#   local  src/araseo/araseo_navigation
-#   remote /home/pinky/ros2_ws/src/araseo/araseo_navigation
-for relative_path in "${PACKAGE_PATHS[@]}"; do
-  local_path="${LOCAL_SRC_DIR}/${relative_path}"
-  remote_parent="${REMOTE_SRC_DIR}/$(dirname "${relative_path}")"
+SSH_CMD=(ssh -o StrictHostKeyChecking=no -p "${REMOTE_PORT}" "${REMOTE}")
+RSYNC_CMD=(rsync -avz --delete -e "ssh -o StrictHostKeyChecking=no -p ${REMOTE_PORT}")
 
-  log "Preparing remote directory for ${relative_path}"
-  run_cmd "${SSH_CMD[@]}" "mkdir -p '${remote_parent}'"
+EXCLUDES=(
+  --exclude='__pycache__'
+  --exclude='*.pyc'
+  --exclude='*.pyo'
+  --exclude='.git'
+  --exclude='.vscode'
+  --exclude='.idea'
+  --exclude='.DS_Store'
+  --exclude='build'
+  --exclude='install'
+  --exclude='log'
+)
 
-  log "Copying ${relative_path}"
-  run_cmd "${SCP_CMD[@]}" "${local_path}" "${REMOTE}:${remote_parent}/"
+log "Using config: ${CONFIG_PATH}"
+log "Remote target: ${REMOTE}"
+
+package_count=0
+for var_name in "${!PACKAGE_INPUT[@]}"; do
+  ((package_count += 1))
+done
+
+(( package_count > 0 )) || fail "No packages found in ${CONFIG_PATH}"
+
+for index in $(printf '%s\n' "${!PACKAGE_INPUT[@]}" | sort -n); do
+  package_name="${PACKAGE_NAME[$index]}"
+  local_path="${PACKAGE_INPUT[$index]}"
+  remote_path="${PACKAGE_OUTPUT[$index]}"
+  remote_parent="$(dirname "${remote_path}")"
+
+  log "Transferring ${package_name}: ${local_path} -> ${REMOTE}:${remote_path}"
+  run_remote_cmd "mkdir -p '${remote_parent}'"
+  run_copy_cmd "${local_path}" "${REMOTE}:${remote_parent}/"
 done
 
 log "Transfer complete."
