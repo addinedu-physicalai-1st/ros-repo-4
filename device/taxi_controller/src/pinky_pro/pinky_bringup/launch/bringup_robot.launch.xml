@@ -1,35 +1,55 @@
 <?xml version='1.0' ?>
 
 <launch>
-    <arg name="use_sim_time" default="False"/> 
+    <arg name="use_sim_time" default="False"/>
     <arg name="wheel_radius" default="0.027"/>
     <arg name="wheel_separation" default="0.0961"/>
+    <arg name="params_file" default="$(find-pkg-share pinky_bringup)/config/pinky_params.yaml"/>
+    <arg name="pinky_id" default="54"/>
+
+    <let name="pinky_id_int" value="$(eval 'int(\'$(var pinky_id)\' or \'0\') &amp; 0xFF')"/>
+    <let name="namespace" value="pinky_$(var pinky_id_int)"/>
+    <let name="map_frame_id" value="map"/>
+    <let name="odom_frame_id" value="$(var namespace)/odom"/>
+    <let name="base_frame_id" value="$(var namespace)/base_footprint"/>
+    <let name="lidar_frame_id" value="$(var namespace)/rplidar_link"/>
 
     <include file="$(find-pkg-share pinky_description)/launch/upload_robot.launch.py">
+        <arg name="namespace" value="$(var namespace)"/>
         <arg name="is_sim" value="$(var use_sim_time)"/>
     </include>
 
-    <include file="$(find-pkg-share sllidar_ros2)/launch/sllidar_c1_launch.py">
-        <arg name="serial_port" value="/dev/ttyAMA0"/>
-        <arg name="frame_id" value="rplidar_link"/>
-        <arg name="inverted" value="false"/>
-        <arg name="angle_compensate" value="true"/>
-        <arg name="scan_mode" value="DenseBoost"/>
-    </include>
+    <group>
+        <push-ros-namespace namespace="$(var namespace)"/>
 
-    <node pkg="pinky_bringup" exec="bringup">
-        <param from="$(find-pkg-share pinky_bringup)/config/pinky_params.yaml"/>
-        <param name="wheel_radius" value="$(var wheel_radius)"/>
-        <param name="wheel_separation" value="$(var wheel_separation)"/>
-        <param name="use_sim_time" value="$(var use_sim_time)"/>
-    </node>
-    
-    <node pkg="pinky_bringup" exec="battery_publisher">
-    </node>
+        <include file="$(find-pkg-share sllidar_ros2)/launch/sllidar_c1_launch.py">
+            <arg name="serial_port" value="/dev/ttyAMA0"/>
+            <arg name="frame_id" value="$(var lidar_frame_id)"/>
+            <arg name="inverted" value="false"/>
+            <arg name="angle_compensate" value="true"/>
+            <arg name="scan_mode" value="DenseBoost"/>
+        </include>
 
-    <node pkg="pinky_bringup" exec="gps_odometry_calibrator">
-        <param from="$(find-pkg-share pinky_bringup)/config/pinky_params.yaml"/>
-        <param name="use_sim_time" value="$(var use_sim_time)"/>
-    </node>
-    
+        <node pkg="pinky_bringup" exec="bringup" name="bringup">
+            <param from="$(var params_file)"/>
+            <param name="wheel_radius" value="$(var wheel_radius)"/>
+            <param name="wheel_separation" value="$(var wheel_separation)"/>
+            <param name="use_sim_time" value="$(var use_sim_time)"/>
+            <param name="pinky_id" value="$(var pinky_id_int)"/>
+            <param name="odom_frame_id" value="$(var odom_frame_id)"/>
+            <param name="base_frame_id" value="$(var base_frame_id)"/>
+        </node>
+
+        <node pkg="pinky_bringup" exec="battery_publisher" name="battery_publisher"/>
+
+        <node pkg="pinky_bringup" exec="gps_odometry_calibrator" name="gps_odometry_calibrator">
+            <param from="$(var params_file)"/>
+            <param name="use_sim_time" value="$(var use_sim_time)"/>
+            <param name="pinky_id" value="$(var pinky_id_int)"/>
+            <param name="raw_odom_topic" value="odom"/>
+            <param name="map_frame_id" value="$(var map_frame_id)"/>
+            <param name="odom_frame_id" value="$(var odom_frame_id)"/>
+            <param name="base_frame_id" value="$(var base_frame_id)"/>
+        </node>
+    </group>
 </launch>

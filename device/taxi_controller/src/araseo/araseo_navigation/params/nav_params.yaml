@@ -1,7 +1,7 @@
 bt_navigator:
   ros__parameters:
-    global_frame: map
-    robot_base_frame: base_footprint
+    global_frame: __MAP_FRAME__
+    robot_base_frame: __BASE_FRAME__
     odom_topic: odom
     bt_loop_duration: 10
     default_server_timeout: 20
@@ -59,8 +59,8 @@ local_costmap:
     ros__parameters:
       update_frequency: 5.0
       publish_frequency: 2.0
-      global_frame: odom
-      robot_base_frame: base_footprint
+      global_frame: __ODOM_FRAME__
+      robot_base_frame: __BASE_FRAME__
       rolling_window: true
       width: 4
       height: 4
@@ -73,7 +73,7 @@ local_costmap:
         enabled: false
         observation_sources: scan
         scan:
-          topic: /scan
+          topic: __SCAN_TOPIC__
           max_obstacle_height: 2.0
           clearing: false
           marking: false
@@ -94,8 +94,8 @@ global_costmap:
     ros__parameters:
       update_frequency: 2.0
       publish_frequency: 1.0
-      global_frame: map
-      robot_base_frame: base_footprint
+      global_frame: __MAP_FRAME__
+      robot_base_frame: __BASE_FRAME__
       rolling_window: true
       width: 4
       height: 4
@@ -107,7 +107,7 @@ global_costmap:
         enabled: false
         observation_sources: scan
         scan:
-          topic: /scan
+          topic: __SCAN_TOPIC__
           max_obstacle_height: 2.0
           clearing: false
           marking: false
@@ -156,9 +156,9 @@ behavior_server:
       plugin: "nav2_behaviors::Wait"
     assisted_teleop:
       plugin: "nav2_behaviors::AssistedTeleop"
-    local_frame: odom
-    global_frame: map
-    robot_base_frame: base_footprint
+    local_frame: __ODOM_FRAME__
+    global_frame: __MAP_FRAME__
+    robot_base_frame: __BASE_FRAME__
     transform_tolerance: 0.1
     simulate_ahead_time: 2.0
     max_rotational_vel: 1.0

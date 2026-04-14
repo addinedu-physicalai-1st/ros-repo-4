@@ -1,5 +1,6 @@
 pinky_bringup:
   ros__parameters:
+    pinky_id: 54
     wheel_radius: 0.027
     wheel_separation: 0.0961
 

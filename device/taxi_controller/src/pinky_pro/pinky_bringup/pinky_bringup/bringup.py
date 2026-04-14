@@ -13,13 +13,11 @@ from tf_transformations import quaternion_from_euler
 from std_msgs.msg import Float32
 
 from .dynamixel_driver import DynamixelDriver
+from .robot_identity import build_robot_identity
 
 TWIST_SUB_TOPIC_NAME = "cmd_vel"
 ODOM_PUB_TOPIC_NAME = "odom"
 JOINT_PUB_TOPIC_NAME = "joint_states"
-ODOM_FRAME_ID = "odom"
-ODOM_CHILD_FRAME_ID = "base_footprint"
-
 SERIAL_PORT_NAME = "/dev/ttyAMA4"
 BAUDRATE = 1000000
 DYNAMIXEL_IDS = [1, 2] # [왼쪽 바퀴 ID, 오른쪽 바퀴 ID]
@@ -42,9 +40,17 @@ class Pinky(Node):
 
         self.declare_parameter('wheel_radius', 0.027)
         self.declare_parameter('wheel_separation', 0.0961)
+        self.declare_parameter('pinky_id', 0)
+
+        pinky_id = int(self.get_parameter('pinky_id').value) & 0xFF
+        identity = build_robot_identity(pinky_id)
+        self.declare_parameter('odom_frame_id', identity['odom_frame_id'])
+        self.declare_parameter('base_frame_id', identity['base_frame_id'])
         
         self.wheel_radius = self.get_parameter('wheel_radius').get_parameter_value().double_value
         self.wheel_separation = self.get_parameter('wheel_separation').get_parameter_value().double_value
+        self.odom_frame_id = self.get_parameter('odom_frame_id').get_parameter_value().string_value
+        self.base_frame_id = self.get_parameter('base_frame_id').get_parameter_value().string_value
         
         self.get_logger().info(f'Wheel radius: {self.wheel_radius}')
         self.get_logger().info(f'Wheel separation: {self.wheel_separation}')
@@ -163,8 +169,8 @@ class Pinky(Node):
     def _publish_tf(self, current_time):
         t = TransformStamped()
         t.header.stamp = current_time.to_msg()
-        t.header.frame_id = ODOM_FRAME_ID
-        t.child_frame_id = ODOM_CHILD_FRAME_ID
+        t.header.frame_id = self.odom_frame_id
+        t.child_frame_id = self.base_frame_id
         t.transform.translation.x = self.x
         t.transform.translation.y = self.y
         q = quaternion_from_euler(0, 0, self.theta)
@@ -174,8 +180,8 @@ class Pinky(Node):
     def _publish_odometry(self, current_time, v_x, vth):
         odom_msg = Odometry()
         odom_msg.header.stamp = current_time.to_msg()
-        odom_msg.header.frame_id = ODOM_FRAME_ID
-        odom_msg.child_frame_id = ODOM_CHILD_FRAME_ID
+        odom_msg.header.frame_id = self.odom_frame_id
+        odom_msg.child_frame_id = self.base_frame_id
         odom_msg.pose.pose.position.x, odom_msg.pose.pose.position.y = self.x, self.y
         q = quaternion_from_euler(0, 0, self.theta)
         odom_msg.pose.pose.orientation.x, odom_msg.pose.pose.orientation.y, odom_msg.pose.pose.orientation.z, odom_msg.pose.pose.orientation.w = q
