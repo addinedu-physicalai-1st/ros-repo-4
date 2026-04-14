@@ -70,9 +70,14 @@ install(TARGETS
 )
 
 install(
-  DIRECTORY action launch params rviz behavior_trees include
+  DIRECTORY action launch params rviz behavior_trees include scripts
   DESTINATION share/${PROJECT_NAME}
   )
+
+install(PROGRAMS
+  scripts/station_interactive_marker.py
+  DESTINATION lib/${PROJECT_NAME}
+)
 
 ament_export_dependencies(rosidl_default_runtime)
 

@@ -11,19 +11,8 @@ Panels:
         - /Lane Graph Planning1
       Splitter Ratio: 0.58
     Tree Height: 520
-  - Class: rviz_common/Selection
-    Name: Selection
-  - Class: rviz_common/Tool Properties
-    Expanded:
-      - /SetGoal1
-      - /Publish Point1
     Name: Tool
     Splitter Ratio: 0.58
-  - Class: rviz_common/Views
-    Expanded:
-      - /Current View1
-    Name: Views
-    Splitter Ratio: 0.5
   - Class: nav2_rviz_plugins/Navigation 2
     Name: Navigation2
 Visualization Manager:
@@ -298,6 +287,31 @@ Visualization Manager:
         History Policy: Keep Last
         Reliability Policy: Reliable
         Value: /lane_graph
+      Value: true
+    - Class: rviz_default_plugins/InteractiveMarkers
+      Enabled: true
+      Name: Station Markers
+      Show Axes: false
+      Show Descriptions: true
+      Show Visual Aids: false
+      Update Topic:
+        Depth: 5
+        Durability Policy: Volatile
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /station_markers/update
+      Value: true
+    - Class: rviz_default_plugins/MarkerArray
+      Enabled: true
+      Name: Route Graph Markers
+      Namespaces:
+        {}
+      Topic:
+        Depth: 5
+        Durability Policy: Volatile
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /route_graph_markers
       Value: true
   Enabled: true
   Global Options:
