@@ -2,9 +2,14 @@
 <root BTCPP_format="4" main_tree_to_execute="MainTree">
   <BehaviorTree ID="MainTree">
     <RecoveryNode number_of_retries="4" name="NavigateRecovery">
-      <PipelineSequence name="NavigateWithRouteTracking">
+      <PipelineSequence name="NavigateWithFixedRoute">
         <ControllerSelector selected_controller="{selected_controller}" default_controller="FollowPath" topic_name="controller_selector"/>
-        <RateController hz="1.0">
+        <!--
+          Keep the initially selected route for the lifetime of the goal.
+          This avoids lane-flip replanning when the robot's pose momentarily snaps to
+          the opposite lane while following an otherwise valid route.
+        -->
+        <GoalUpdatedController>
           <RecoveryNode number_of_retries="1" name="ComputeRouteToPose">
             <ComputeRoute
               goal="{goal}"
@@ -18,7 +23,7 @@
               <ClearEntireCostmap name="ClearLocalCostmap-Context" service_name="local_costmap/clear_entirely_local_costmap"/>
             </Sequence>
           </RecoveryNode>
-        </RateController>
+        </GoalUpdatedController>
         <RecoveryNode number_of_retries="1" name="FollowRoutePath">
           <FollowPath path="{path}" controller_id="{selected_controller}" error_code_id="{follow_path_error_code}"/>
           <Sequence>

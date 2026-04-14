@@ -4,6 +4,8 @@
   <arg name="stations_file" default="$(find-pkg-share araseo_navigation)/params/stations.yaml"/>
   <arg name="route_graph_file" default="$(find-pkg-share araseo_navigation)/params/route_graph.geojson"/>
   <arg name="rviz_config" default="$(find-pkg-share araseo_navigation)/rviz/lane_nav_view.rviz"/>
+  <arg name="plan_topic" default="/plan"/>
+  <arg name="local_plan_topic" default="/local_plan"/>
 
   <!-- Station Navigator Node -->
   <node pkg="araseo_navigation" exec="station_navigator" name="station_navigator" output="screen">
@@ -19,6 +21,8 @@
     <param name="stations_file" value="$(var stations_file)" type="str"/>
     <param name="route_graph_file" value="$(var route_graph_file)" type="str"/>
     <param name="map_frame" value="map"/>
+    <param name="plan_topic" value="$(var plan_topic)" type="str"/>
+    <param name="local_plan_topic" value="$(var local_plan_topic)" type="str"/>
   </node>
 
   <!-- RViz2 -->
