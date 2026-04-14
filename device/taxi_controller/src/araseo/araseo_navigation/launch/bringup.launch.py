@@ -134,7 +134,7 @@ def generate_launch_description():
             DeclareLaunchArgument("container_name", default_value="nav2_container"),
             DeclareLaunchArgument("use_composition", default_value="False"),
             DeclareLaunchArgument("use_respawn", default_value="False"),
-            DeclareLaunchArgument("log_level", default_value="info"),
+            DeclareLaunchArgument("log_level", default_value="debug"),
             DeclareLaunchArgument(
                 "lifecycle_nodes_nav",
                 default_value="['controller_server', 'smoother_server', 'route_server', 'behavior_server', 'bt_navigator', 'waypoint_follower', 'velocity_smoother']",

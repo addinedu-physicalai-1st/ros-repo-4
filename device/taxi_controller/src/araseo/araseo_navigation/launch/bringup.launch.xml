@@ -14,7 +14,7 @@
     <arg name="container_name" default="nav2_container"/>
     <arg name="use_composition" default="False"/>
     <arg name="use_respawn" default="False"/>
-    <arg name="log_level" default="info"/>
+    <arg name="log_level" default="debug"/>
     <arg name="lifecycle_nodes_nav" default="['controller_server', 'smoother_server', 'route_server', 'behavior_server', 'bt_navigator', 'waypoint_follower', 'velocity_smoother']"/>
 
     <include file="$(find-pkg-share araseo_navigation)/launch/bringup.launch.py">

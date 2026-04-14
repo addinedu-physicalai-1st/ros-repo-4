@@ -125,9 +125,12 @@ global_costmap:
 
 route_server:
   ros__parameters:
+    base_frame: __BASE_FRAME__
     boundary_radius_to_achieve_node: 0.10
     radius_to_achieve_node: 0.12
     smooth_corners: true
+    smoothing_radius: 0.08
+    enable_nn_search: true
     edge_cost_functions: ["DistanceScorer"]
     DistanceScorer:
       plugin: "nav2_route::DistanceScorer"

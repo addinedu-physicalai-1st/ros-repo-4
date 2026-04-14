@@ -87,6 +87,7 @@ private:
     const rclcpp_action::GoalUUID &,
     std::shared_ptr<const NavigateToStation::Goal> goal)
   {
+    RCLCPP_INFO(get_logger(), "Received goal request for station_id='%s'", goal->station_id.c_str());
     if (stations_.find(goal->station_id) == stations_.end()) {
       RCLCPP_WARN(
         get_logger(), "Rejected station goal for unknown station_id='%s'",
@@ -98,8 +99,10 @@ private:
   }
 
   rclcpp_action::CancelResponse handleCancel(
-    const std::shared_ptr<GoalHandleNavigateToStation>)
+    const std::shared_ptr<GoalHandleNavigateToStation> goal_handle)
   {
+    const auto goal = goal_handle->get_goal();
+    RCLCPP_INFO(get_logger(), "Received cancellation request for station_id='%s'", goal->station_id.c_str());
     std::scoped_lock lock(active_nav_goal_mutex_);
     if (active_nav_goal_) {
       (void)navigate_to_pose_client_->async_cancel_goal(active_nav_goal_);
@@ -176,6 +179,12 @@ private:
         station_feedback->number_of_recoveries = feedback->number_of_recoveries;
         station_feedback->distance_remaining = feedback->distance_remaining;
         locked_goal_handle->publish_feedback(station_feedback);
+
+        RCLCPP_INFO_THROTTLE(
+          get_logger(), *get_clock(), 2000,
+          "Navigating to station '%s': distance_remaining=%.2f m, estimated_time=%.1f s",
+          station.station_id.c_str(), feedback->distance_remaining,
+          rclcpp::Duration(feedback->estimated_time_remaining).seconds());
       };
     options.result_callback =
       [&result_promise](const GoalHandleNavigateToPose::WrappedResult & wrapped_result) mutable {
@@ -207,6 +216,7 @@ private:
     if (wrapped_result.code == rclcpp_action::ResultCode::SUCCEEDED &&
       wrapped_result.result && wrapped_result.result->error_code == NavigateToPose::Result::NONE)
     {
+      RCLCPP_INFO(get_logger(), "Successfully arrived at station_id='%s'", station.station_id.c_str());
       result->success = true;
       result->message = "Arrived at station";
       goal_handle->succeed(result);
@@ -216,6 +226,10 @@ private:
     if (wrapped_result.code == rclcpp_action::ResultCode::CANCELED || goal_handle->is_canceling()) {
       result->success = false;
       result->message = "Navigation canceled";
+      RCLCPP_INFO(
+        get_logger(),
+        "Station navigation canceled for station_id='%s' (nav2_error_code=%u)",
+        station.station_id.c_str(), result->error_code);
       goal_handle->canceled(result);
       return;
     }
@@ -227,8 +241,9 @@ private:
       "Navigation failed without Nav2 result";
     RCLCPP_WARN(
       get_logger(),
-      "Station navigation failed for station_id='%s': %s",
-      station.station_id.c_str(), result->message.c_str());
+      "Station navigation failed for station_id='%s' via action='%s': result_code=%d, nav2_error_code=%u, message='%s'",
+      station.station_id.c_str(), navigation_action_name_.c_str(),
+      static_cast<int>(wrapped_result.code), result->error_code, result->message.c_str());
     goal_handle->abort(result);
   }
 

@@ -5,24 +5,39 @@
       <PipelineSequence name="NavigateWithRouteTracking">
         <ControllerSelector selected_controller="{selected_controller}" default_controller="FollowPath" topic_name="controller_selector"/>
         <RateController hz="1.0">
-          <ComputeAndTrackRoute
-            goal="{goal}"
-            use_poses="true"
-            use_start="false"
-            path="{path}"
-            route="{route}"
-            rerouted="{rerouted}"
-            error_code_id="{compute_route_error_code}"/>
+          <RecoveryNode number_of_retries="1" name="ComputeRouteToPose">
+            <ComputeRoute
+              goal="{goal}"
+              use_poses="true"
+              use_start="false"
+              path="{path}"
+              route="{route}"
+              error_code_id="{compute_route_error_code}"/>
+            <Sequence>
+              <WouldAPlannerRecoveryHelp error_code="{compute_route_error_code}"/>
+              <ClearEntireCostmap name="ClearLocalCostmap-Context" service_name="local_costmap/clear_entirely_local_costmap"/>
+            </Sequence>
+          </RecoveryNode>
         </RateController>
-        <FollowPath path="{path}" controller_id="{selected_controller}" error_code_id="{follow_path_error_code}"/>
+        <RecoveryNode number_of_retries="1" name="FollowRoutePath">
+          <FollowPath path="{path}" controller_id="{selected_controller}" error_code_id="{follow_path_error_code}"/>
+          <Sequence>
+            <WouldAControllerRecoveryHelp error_code="{follow_path_error_code}"/>
+            <ClearEntireCostmap name="ClearLocalCostmap-Follow" service_name="local_costmap/clear_entirely_local_costmap"/>
+          </Sequence>
+        </RecoveryNode>
       </PipelineSequence>
 
       <Sequence>
+        <Fallback>
+          <WouldAControllerRecoveryHelp error_code="{follow_path_error_code}"/>
+          <WouldAPlannerRecoveryHelp error_code="{compute_route_error_code}"/>
+        </Fallback>
         <ReactiveFallback name="RecoveryFallback">
           <GoalUpdated/>
           <RoundRobin name="RecoveryActions">
             <Wait wait_duration="2.0"/>
-            <ClearEntireCostmap name="ClearLocalCostmap" service_name="local_costmap/clear_entirely_local_costmap"/>
+            <ClearEntireCostmap name="ClearLocalCostmap-Recovery" service_name="local_costmap/clear_entirely_local_costmap"/>
           </RoundRobin>
         </ReactiveFallback>
       </Sequence>
