@@ -39,8 +39,6 @@
             <param name="odom_frame_id" value="$(var odom_frame_id)"/>
             <param name="base_frame_id" value="$(var base_frame_id)"/>
 
-            <remap from="/tf" to="tf"/>
-            <remap from="/tf_static" to="tf_static"/>
         </node>
 
         <node pkg="pinky_bringup" exec="battery_publisher" name="battery_publisher"/>
@@ -54,8 +52,6 @@
             <param name="odom_frame_id" value="$(var odom_frame_id)"/>
             <param name="base_frame_id" value="$(var base_frame_id)"/>
 
-            <remap from="/tf" to="tf"/>
-            <remap from="/tf_static" to="tf_static"/>
         </node>
     </group>
 </launch>

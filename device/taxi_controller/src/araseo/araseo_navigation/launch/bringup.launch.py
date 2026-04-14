@@ -77,7 +77,6 @@ def _launch_setup(context, *args, **kwargs):
                             "use_sim_time": LaunchConfiguration("use_sim_time"),
                         },
                     ],
-                    remappings=[("/tf", "tf"), ("/tf_static", "tf_static")],
                     condition=IfCondition(LaunchConfiguration("use_composition")),
                 ),
                 navigation_launch,
