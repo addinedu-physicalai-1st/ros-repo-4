@@ -32,6 +32,7 @@ def _launch_setup(context, *args, **kwargs):
     namespaced_params = RewrittenYaml(
         source_file=configured_params,
         root_key=identity["namespace"],
+        param_rewrites={},
         convert_types=True,
     )
 
