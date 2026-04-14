@@ -20,7 +20,7 @@
                 <child_frame_id>${namespace}base_footprint</child_frame_id>
                 <odom_publisher_frequency>30</odom_publisher_frequency>
 
-                <tf_topic>/tf</tf_topic>
+                <tf_topic>${namespace}tf</tf_topic>
             </plugin>
 
             <plugin filename="gz-sim-joint-state-publisher-system" name="gz::sim::systems::JointStatePublisher">

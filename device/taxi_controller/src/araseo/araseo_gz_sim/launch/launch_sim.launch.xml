@@ -1,7 +1,6 @@
 <?xml version='1.0' ?>
-
 <launch>
-    <arg name="pinky_id" default=""/>
+    <arg name="pinky_id" default="54"/>
     <arg name="use_sim_time" default="True"/>
     <arg name="cam_tilt_deg" default="25"/>
     <arg name="bridge_params" default="$(find-pkg-share araseo_gz_sim)/params/pinky_bridge.yaml"/>
@@ -11,10 +10,19 @@
     <arg name="spawn_z" default="0.0"/>
     <arg name="spawn_yaw" default="0"/>
 
+    <let name="world_path" value="$(find-pkg-share araseo_gz_sim)/worlds/minicity.sdf"/>
+
     <set_env name="GZ_SIM_RESOURCE_PATH" value="$(find-pkg-share pinky_description)/../:/$(find-pkg-share araseo_gz_sim)/models:/$(env HOME)/.gazebo/models"/>
     <set_env name="RCUTILS_LOGGING_USE_SIMTIME" value="1"/>
 
-    <include file="$(find-pkg-share araseo_gz_sim)/launch/launch_sim.launch.py">
+    <!-- Gazebo Sim -->
+    <include file="$(find-pkg-share ros_gz_sim)/launch/gz_sim.launch.py">
+        <arg name="gz_args" value="-r -v4 $(var world_path)"/>
+        <arg name="on_exit_shutdown" value="true"/>
+    </include>
+
+    <!-- Spawn Robot -->
+    <include file="$(find-pkg-share araseo_gz_sim)/launch/spawn_gz_robot.launch.xml">
         <arg name="pinky_id" value="$(var pinky_id)"/>
         <arg name="use_sim_time" value="$(var use_sim_time)"/>
         <arg name="cam_tilt_deg" value="$(var cam_tilt_deg)"/>

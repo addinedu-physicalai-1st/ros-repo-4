@@ -68,33 +68,41 @@ class GpsOdometryCalibrator(Node):
     def __init__(self):
         super().__init__("gps_odometry_calibrator")
 
-        self.declare_parameter("raw_odom_topic", "odom")
-        self.declare_parameter("pinky_id", 0 & 0xFF)
-        self.declare_parameter("map_frame_id", "map")
-        self.declare_parameter("odom_frame_id", "odom")
-        self.declare_parameter("base_frame_id", "base_footprint")
-        self.declare_parameter("correction_period_sec", 2.0)
-        self.declare_parameter("gps_timeout_sec", 5.0)
-        self.declare_parameter("gps_min_confidence", 90)
-        self.declare_parameter("translation_smoothing_gain", 0.35)
-        self.declare_parameter("yaw_smoothing_gain", 0.35)
+        self.map_frame_id = self.declare_parameter("map_frame_id", "map").value
+        self.odom_frame_id = self.declare_parameter("odom_frame_id", "odom").value
+        self.base_frame_id = self.declare_parameter("base_frame_id", "base_footprint").value
+        self.namespace = self.declare_parameter("namespace", "").value
 
-        raw_odom_topic = self.get_parameter("raw_odom_topic").value
-        pinky_id = self.get_parameter("pinky_id").value
-        gps_topic = f"/pinky_{pinky_id}/gps_pos"
-
-        self.map_frame_id = self.get_parameter("map_frame_id").value
-        self.odom_frame_id = self.get_parameter("odom_frame_id").value
-        self.base_frame_id = self.get_parameter("base_frame_id").value
-        correction_period_sec = float(self.get_parameter("correction_period_sec").value)
-        self.gps_timeout_sec = float(self.get_parameter("gps_timeout_sec").value)
-        self.gps_min_confidence = float(self.get_parameter("gps_min_confidence").value)
+        gps_topic = f"/{self.namespace}/gps_pos"
+        self.raw_odom_topic = self.declare_parameter("raw_odom_topic", "odom").value
+        
+        correction_period_sec = float(self.declare_parameter("correction_period_sec", 2.0).value)
+        self.gps_timeout_sec = float(self.declare_parameter("gps_timeout_sec", 5.0).value)
+        self.gps_min_confidence = float(self.declare_parameter("gps_min_confidence", 90).value)
         self.translation_smoothing_gain = float(
-            self.get_parameter("translation_smoothing_gain").value
+            self.declare_parameter("translation_smoothing_gain", 0.35).value
         )
         self.yaw_smoothing_gain = float(
-            self.get_parameter("yaw_smoothing_gain").value
+            self.declare_parameter("yaw_smoothing_gain", 0.35).value
         )
+
+        self.get_logger().info(
+    f"""
+===== GPS Odom Calibrator Parameters =====
+namespace: {self.namespace}
+
+gps_topic: {gps_topic}
+raw_odom_topic: {self.raw_odom_topic}
+
+correction_period_sec: {correction_period_sec}
+gps_timeout_sec: {self.gps_timeout_sec}
+gps_min_confidence: {self.gps_min_confidence}
+
+translation_smoothing_gain: {self.translation_smoothing_gain}
+yaw_smoothing_gain: {self.yaw_smoothing_gain}
+=========================================
+""".strip()
+)
 
         self.latest_raw_odom: Optional[Odometry] = None
         self.latest_gps_pose: Optional[PinkyGps] = None
@@ -104,7 +112,7 @@ class GpsOdometryCalibrator(Node):
 
         self.raw_odom_sub = self.create_subscription(
             Odometry,
-            raw_odom_topic,
+            self.raw_odom_topic,
             self.raw_odom_callback,
             10,
         )
@@ -115,13 +123,13 @@ class GpsOdometryCalibrator(Node):
             10,
         )
         self.tf_broadcaster = TransformBroadcaster(self)
-        self.create_timer(correction_period_sec, self.calibration_timer_callback)
+        self.calibration_timer = self.create_timer(correction_period_sec, self.calibration_timer_callback)
 
         self.get_logger().info(
-            f"GPS odometry calibrator started. raw_odom='{raw_odom_topic}', "
-            f"gps='{gps_topic}', pinky_id={pinky_id}, map_frame='{self.map_frame_id}', "
+            f"GPS odometry calibrator started. raw_odom='{self.raw_odom_topic}', "
+            f"gps='{gps_topic}', namespace={self.namespace}, map_frame='{self.map_frame_id}', "
             f"odom_frame='{self.odom_frame_id}', "
-            f"period={correction_period_sec:.1f}s"
+            f"period={correction_period_sec:.1f}s,"
         )
 
     def raw_odom_callback(self, msg: Odometry) -> None:

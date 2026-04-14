@@ -86,7 +86,7 @@ def _launch_setup(context, *args, **kwargs):
                         {
                             "use_sim_time": use_sim_time,
                             "pinky_id": identity["pinky_id"],
-                            "raw_odom_topic": "odom",
+                            "raw_odom_topic": f"/{identity['namespace']}/odom",
                             "map_frame_id": identity["map_frame_id"],
                             "odom_frame_id": identity["odom_frame_id"],
                             "base_frame_id": identity["base_frame_id"],
