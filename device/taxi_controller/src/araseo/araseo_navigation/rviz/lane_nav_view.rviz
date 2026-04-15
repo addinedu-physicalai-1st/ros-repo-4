@@ -286,7 +286,7 @@ Visualization Manager:
         Durability Policy: Transient Local
         History Policy: Keep Last
         Reliability Policy: Reliable
-        Value: /lane_graph
+        Value: /route_graph_markers
       Value: true
     - Class: rviz_default_plugins/InteractiveMarkers
       Enabled: true
