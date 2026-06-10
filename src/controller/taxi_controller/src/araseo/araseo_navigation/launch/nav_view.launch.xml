@@ -1,31 +1,20 @@
 <launch>
   <arg name="use_sim_time" default="true"/>
-  
-  <arg name="stations_file" default="$(find-pkg-share araseo_navigation)/params/stations.yaml"/>
+  <arg name="stops_file" default="$(find-pkg-share araseo_navigation)/params/stops.yaml"/>
   <arg name="route_graph_file" default="$(find-pkg-share araseo_navigation)/params/route_graph.geojson"/>
   <arg name="rviz_config" default="$(find-pkg-share araseo_navigation)/rviz/lane_nav_view.rviz"/>
-  <arg name="plan_topic" default="/plan"/>
-  <arg name="local_plan_topic" default="/local_plan"/>
+  <arg name="plan_topic" default="plan"/>
+  <arg name="local_plan_topic" default="local_plan"/>
 
-  <!-- Station Navigator Node -->
-  <node pkg="araseo_navigation" exec="station_navigator" name="station_navigator" output="screen">
+  <node pkg="araseo_navigation" exec="route_debug_view.py" name="route_debug_view" output="screen">
     <param name="use_sim_time" value="$(var use_sim_time)"/>
-    <param name="stations_file" value="$(var stations_file)"/>
-    <param name="map_frame" value="map"/>
-    <param name="navigation_action_name" value="navigate_to_pose"/>
-  </node>
-
-  <!-- Station Interactive Marker Node -->
-  <node pkg="araseo_navigation" exec="station_interactive_marker.py" name="station_interactive_marker" output="screen">
-    <param name="use_sim_time" value="$(var use_sim_time)"/>
-    <param name="stations_file" value="$(var stations_file)" type="str"/>
+    <param name="stops_file" value="$(var stops_file)" type="str"/>
     <param name="route_graph_file" value="$(var route_graph_file)" type="str"/>
     <param name="map_frame" value="map"/>
     <param name="plan_topic" value="$(var plan_topic)" type="str"/>
     <param name="local_plan_topic" value="$(var local_plan_topic)" type="str"/>
   </node>
 
-  <!-- RViz2 -->
   <node pkg="rviz2" exec="rviz2" name="rviz2" args="-d $(var rviz_config)" output="screen">
     <param name="use_sim_time" value="$(var use_sim_time)"/>
   </node>

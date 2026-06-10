@@ -288,31 +288,6 @@ Visualization Manager:
         Reliability Policy: Reliable
         Value: /route_graph_markers
       Value: true
-    - Class: rviz_default_plugins/InteractiveMarkers
-      Enabled: true
-      Name: Station Markers
-      Show Axes: false
-      Show Descriptions: true
-      Show Visual Aids: false
-      Update Topic:
-        Depth: 5
-        Durability Policy: Volatile
-        History Policy: Keep Last
-        Reliability Policy: Reliable
-        Value: /station_markers/update
-      Value: true
-    - Class: rviz_default_plugins/MarkerArray
-      Enabled: true
-      Name: Route Graph Markers
-      Namespaces:
-        {}
-      Topic:
-        Depth: 5
-        Durability Policy: Volatile
-        History Policy: Keep Last
-        Reliability Policy: Reliable
-        Value: /route_graph_markers
-      Value: true
   Enabled: true
   Global Options:
     Background Color: 48; 48; 48

@@ -1,0 +1,14 @@
+geometry_msgs/PoseStamped query_pose
+---
+bool success
+uint16 error_code
+string stop_id
+uint16 route_node_id
+geometry_msgs/PoseStamped stop_pose
+string message
+---
+string stop_id
+geometry_msgs/PoseStamped stop_pose
+float64 stop_distance
+float32 path_distance_remaining
+float32 speed

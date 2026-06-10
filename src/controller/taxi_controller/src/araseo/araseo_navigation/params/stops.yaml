@@ -1,0 +1,49 @@
+stops:
+  - stop_id: stop_top_west
+    route_node_id: 8
+    pose:
+      x: 0.373978
+      y: 1.319357
+      yaw: 3.141593
+  - stop_id: stop_top_east
+    route_node_id: 4
+    pose:
+      x: 1.470645
+      y: 1.158214
+      yaw: 0.0
+  - stop_id: stop_right_north
+    route_node_id: 29
+    pose:
+      x: 1.627312
+      y: 1.002107
+      yaw: 1.570796
+  - stop_id: stop_right_south
+    route_node_id: 32
+    pose:
+      x: 1.627312
+      y: 0.483429
+      yaw: -1.570796
+  - stop_id: stop_bottom_east
+    route_node_id: 16
+    pose:
+      x: 1.394839
+      y: 0.090643
+      yaw: 0.0
+  - stop_id: stop_bottom_west
+    route_node_id: 9
+    pose:
+      x: 1.394839
+      y: 0.251786
+      yaw: 3.141593
+  - stop_id: stop_left_south
+    route_node_id: 20
+    pose:
+      x: 0.090968
+      y: 0.297107
+      yaw: -1.570796
+  - stop_id: stop_left_north
+    route_node_id: 24
+    pose:
+      x: 0.252688
+      y: 1.037357
+      yaw: 1.570796

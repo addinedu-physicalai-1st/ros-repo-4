@@ -7,24 +7,22 @@
     <arg name="pinky_params_file" default="$(find-pkg-share pinky_bringup)/config/pinky_params.yaml"/>
     <arg name="use_sim_time" default="true"/>
     <arg name="params_file" default="$(find-pkg-share araseo_navigation)/params/nav_params.yaml"/>
-    <arg name="bt_xml_file" default="$(find-pkg-share araseo_navigation)/behavior_trees/custom_nav_to_pose.xml"/>
     <arg name="route_graph_file" default="$(find-pkg-share araseo_navigation)/params/route_graph.geojson"/>
-    <arg name="stations_file" default="$(find-pkg-share araseo_navigation)/params/stations.yaml"/>
+    <arg name="stops_file" default="$(find-pkg-share araseo_navigation)/params/stops.yaml"/>
     <arg name="autostart" default="True"/>
     <arg name="container_name" default="nav2_container"/>
     <arg name="use_composition" default="False"/>
     <arg name="use_respawn" default="False"/>
-    <arg name="log_level" default="debug"/>
-    <arg name="lifecycle_nodes_nav" default="['controller_server', 'smoother_server', 'route_server', 'behavior_server', 'bt_navigator', 'waypoint_follower', 'velocity_smoother']"/>
+    <arg name="log_level" default="info"/>
+    <arg name="lifecycle_nodes_nav" default="['controller_server', 'route_server', 'velocity_smoother']"/>
 
     <include file="$(find-pkg-share araseo_navigation)/launch/bringup.launch.py">
         <arg name="pinky_id" value="$(var pinky_id)"/>
         <arg name="pinky_params_file" value="$(var pinky_params_file)"/>
         <arg name="use_sim_time" value="$(var use_sim_time)"/>
         <arg name="params_file" value="$(var params_file)"/>
-        <arg name="bt_xml_file" value="$(var bt_xml_file)"/>
         <arg name="route_graph_file" value="$(var route_graph_file)"/>
-        <arg name="stations_file" value="$(var stations_file)"/>
+        <arg name="stops_file" value="$(var stops_file)"/>
         <arg name="autostart" value="$(var autostart)"/>
         <arg name="container_name" value="$(var container_name)"/>
         <arg name="use_composition" value="$(var use_composition)"/>
