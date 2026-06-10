@@ -1,12 +1,14 @@
-#!/usr/bin/env python3
-
-import argparse
 import json
 import math
 from pathlib import Path
-import sys
 
 import yaml
+
+
+PACKAGE_DIR = Path(__file__).resolve().parents[1]
+ROUTE_GRAPH = PACKAGE_DIR / 'params' / 'route_graph.geojson'
+STOPS = PACKAGE_DIR / 'params' / 'stops.yaml'
+STOP_NODE_TOLERANCE = 1e-6
 
 
 def load_route_nodes(route_graph_path):
@@ -79,26 +81,11 @@ def validate_stops(stops_path, nodes, tolerance):
     return len(stops)
 
 
-def main():
-    parser = argparse.ArgumentParser(
-        description='Validate araseo route graph and stop data.'
-    )
-    parser.add_argument('--route-graph', required=True)
-    parser.add_argument('--stops', required=True)
-    parser.add_argument('--tolerance', type=float, default=1e-6)
-    args = parser.parse_args()
+def test_route_graph_and_stops_are_consistent():
+    graph, nodes = load_route_nodes(ROUTE_GRAPH)
 
-    try:
-        graph, nodes = load_route_nodes(args.route_graph)
-        validate_edges(graph, nodes)
-        stop_count = validate_stops(args.stops, nodes, args.tolerance)
-    except Exception as exc:
-        print(f'ERROR: {exc}', file=sys.stderr)
-        return 1
+    assert nodes, 'route graph must contain at least one route node'
+    validate_edges(graph, nodes)
 
-    print(f'OK: {len(nodes)} route nodes and {stop_count} stops are valid')
-    return 0
-
-
-if __name__ == '__main__':
-    raise SystemExit(main())
+    stop_count = validate_stops(STOPS, nodes, STOP_NODE_TOLERANCE)
+    assert stop_count > 0, 'stops file must contain at least one stop'
