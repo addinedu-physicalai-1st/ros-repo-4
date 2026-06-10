@@ -4,10 +4,6 @@ pinky_bringup:
     wheel_radius: 0.027
     wheel_separation: 0.0961
 
-gazebo_gps_publisher:
-  ros__parameters:
-    pinky_id: 54
-
 gps_odometry_calibrator:
   ros__parameters:
     raw_odom_topic: "odom"
@@ -16,7 +12,6 @@ gps_odometry_calibrator:
     odom_frame_id: "odom"
     base_frame_id: "base_footprint"
     correction_period_sec: 5.0
-    gps_timeout_sec: 10.0
     gps_min_confidence: 90
     translation_smoothing_gain: 0.2
     yaw_smoothing_gain: 0.2

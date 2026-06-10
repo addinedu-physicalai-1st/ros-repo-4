@@ -39,7 +39,7 @@ def load_pinky_id_from_params_file(params_file: str | Path) -> int:
         return DEFAULT_PINKY_ID
 
     data = yaml.safe_load(path.read_text()) or {}
-    for node_name in ("pinky_bringup", "gps_odometry_calibrator", "gazebo_gps_publisher"):
+    for node_name in ("pinky_bringup", "gps_odometry_calibrator"):
         params = (data.get(node_name) or {}).get("ros__parameters") or {}
         if "pinky_id" in params:
             return normalize_pinky_id(params["pinky_id"])

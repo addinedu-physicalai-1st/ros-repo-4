@@ -5,14 +5,13 @@ from dataclasses import dataclass
 from typing import Optional
 
 import rclpy
-from geometry_msgs.msg import PoseStamped, TransformStamped
+from geometry_msgs.msg import TransformStamped
 from nav_msgs.msg import Odometry
 from rclpy.node import Node
-from rclpy.time import Time
 from tf2_ros import TransformBroadcaster
 from tf_transformations import euler_from_quaternion, quaternion_from_euler
 
-from gps_field_msgs.msg import PinkyGps
+from araseo_msgs.srv import TaxiGps
 
 
 @dataclass
@@ -72,12 +71,12 @@ class GpsOdometryCalibrator(Node):
         self.odom_frame_id = self.declare_parameter("odom_frame_id", "odom").value
         self.base_frame_id = self.declare_parameter("base_frame_id", "base_footprint").value
         self.namespace = self.declare_parameter("namespace", "").value
+        self.pinky_id = int(self.declare_parameter("pinky_id", 0).value) & 0xFF
 
-        gps_topic = f"/{self.namespace}/gps_pos"
+        self.gps_service_name = self.declare_parameter("gps_service_name", "/gps/taxi").value
         self.raw_odom_topic = self.declare_parameter("raw_odom_topic", "odom").value
         
         correction_period_sec = float(self.declare_parameter("correction_period_sec", 2.0).value)
-        self.gps_timeout_sec = float(self.declare_parameter("gps_timeout_sec", 5.0).value)
         self.gps_min_confidence = float(self.declare_parameter("gps_min_confidence", 90).value)
         self.translation_smoothing_gain = float(
             self.declare_parameter("translation_smoothing_gain", 0.35).value
@@ -90,12 +89,12 @@ class GpsOdometryCalibrator(Node):
     f"""
 ===== GPS Odom Calibrator Parameters =====
 namespace: {self.namespace}
+pinky_id: {self.pinky_id}
 
-gps_topic: {gps_topic}
+gps_service_name: {self.gps_service_name}
 raw_odom_topic: {self.raw_odom_topic}
 
 correction_period_sec: {correction_period_sec}
-gps_timeout_sec: {self.gps_timeout_sec}
 gps_min_confidence: {self.gps_min_confidence}
 
 translation_smoothing_gain: {self.translation_smoothing_gain}
@@ -105,10 +104,9 @@ yaw_smoothing_gain: {self.yaw_smoothing_gain}
 )
 
         self.latest_raw_odom: Optional[Odometry] = None
-        self.latest_gps_pose: Optional[PinkyGps] = None
         self.map_to_odom: Optional[Pose2D] = None
         self.initialized = False
-        self.last_gps_stamp = None
+        self.pending_gps_request = False
 
         self.raw_odom_sub = self.create_subscription(
             Odometry,
@@ -116,18 +114,14 @@ yaw_smoothing_gain: {self.yaw_smoothing_gain}
             self.raw_odom_callback,
             10,
         )
-        self.gps_sub = self.create_subscription(
-            PinkyGps,
-            gps_topic,
-            self.gps_callback,
-            10,
-        )
+        self.gps_client = self.create_client(TaxiGps, self.gps_service_name)
         self.tf_broadcaster = TransformBroadcaster(self)
         self.calibration_timer = self.create_timer(correction_period_sec, self.calibration_timer_callback)
 
         self.get_logger().info(
             f"GPS odometry calibrator started. raw_odom='{self.raw_odom_topic}', "
-            f"gps='{gps_topic}', namespace={self.namespace}, map_frame='{self.map_frame_id}', "
+            f"gps_service='{self.gps_service_name}', namespace={self.namespace}, "
+            f"map_frame='{self.map_frame_id}', "
             f"odom_frame='{self.odom_frame_id}', "
             f"period={correction_period_sec:.1f}s,"
         )
@@ -137,35 +131,52 @@ yaw_smoothing_gain: {self.yaw_smoothing_gain}
         if self.initialized:
             self.publish_map_to_odom_tf(msg.header.stamp)
 
-    def gps_callback(self, msg: PinkyGps) -> None:
-        if not msg.is_valid or msg.confidence < self.gps_min_confidence:
-            return
-        self.latest_gps_pose = msg
-        self.last_gps_stamp = Time.from_msg(msg.header.stamp)
-
     def calibration_timer_callback(self) -> None:
-        if self.latest_raw_odom is None or self.latest_gps_pose is None:
+        if self.latest_raw_odom is None:
             return
 
-        if self.last_gps_stamp is None:
-            return
-
-        gps_age = (self.get_clock().now() - self.last_gps_stamp).nanoseconds / 1e9
-        if gps_age > self.gps_timeout_sec:
+        if not self.gps_client.service_is_ready():
             self.get_logger().warn(
-                f"Skipping GPS correction because the latest GPS sample is stale ({gps_age:.2f}s)."
+                f"Skipping GPS correction because service '{self.gps_service_name}' is not ready."
             )
             return
 
+        if self.pending_gps_request:
+            return
+
+        request = TaxiGps.Request()
+        request.id = self.pinky_id
+        future = self.gps_client.call_async(request)
+        future.add_done_callback(self.handle_gps_response)
+        self.pending_gps_request = True
+
+    def handle_gps_response(self, future) -> None:
+        self.pending_gps_request = False
+        try:
+            response = future.result()
+        except Exception as exc:
+            self.get_logger().warn(f"GPS service call failed: {exc}")
+            return
+
+        if response is None:
+            self.get_logger().warn("GPS service returned no response.")
+            return
+
+        if not response.success or response.confidence < self.gps_min_confidence:
+            return
+
+        if self.latest_raw_odom is None:
+            return
+
         raw_pose = self.get_latest_raw_pose()
-        gps_pose = self.get_latest_gps_pose()
+        gps_pose = self.pose_stamped_to_2d(response.gps)
 
         if not self.initialized:
             self.map_to_odom = compose_pose(gps_pose, inverse_pose(raw_pose))
             self.initialized = True
             self.get_logger().info(
                 f"Initialized '{self.map_frame_id}' -> '{self.odom_frame_id}' from GPS frame "
-                f"'{self.latest_gps_pose.header.frame_id or 'unknown'}'."
+                f"'{response.gps.header.frame_id or 'unknown'}'."
             )
         else:
             assert self.map_to_odom is not None
@@ -193,12 +204,10 @@ yaw_smoothing_gain: {self.yaw_smoothing_gain}
             self.latest_raw_odom.pose.pose.orientation,
         )
 
-    def get_latest_gps_pose(self) -> Pose2D:
-        assert self.latest_gps_pose is not None
-        return Pose2D(
-            x=self.latest_gps_pose.x_mm / 1000.0,
-            y=self.latest_gps_pose.y_mm / 1000.0,
-            yaw=math.radians(self.latest_gps_pose.yaw_deg),
+    def pose_stamped_to_2d(self, pose_stamped) -> Pose2D:
+        return pose_to_2d(
+            pose_stamped.pose.position,
+            pose_stamped.pose.orientation,
         )
 
     def compute_target_map_to_odom(self, raw_pose: Pose2D, gps_pose: Pose2D) -> Pose2D:

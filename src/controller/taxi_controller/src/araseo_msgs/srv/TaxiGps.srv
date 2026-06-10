@@ -1,0 +1,5 @@
+uint8 id
+---
+bool success
+geometry_msgs/PoseStamped gps
+uint8 confidence

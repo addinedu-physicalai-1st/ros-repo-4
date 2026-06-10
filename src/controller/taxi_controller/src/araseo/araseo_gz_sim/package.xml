@@ -9,17 +9,16 @@
 
   <buildtool_depend>ament_cmake</buildtool_depend>
 
-  <depend>ros_gz</depend>
-  <depend>ament_index_python</depend>
-  <depend>gz_ros2_control</depend>
   <depend>geometry_msgs</depend>
-  <depend>gps_field_msgs</depend>
+  <depend>araseo_msgs</depend>
   <depend>launch</depend>
   <depend>launch_ros</depend>
   <depend>pinky_bringup</depend>
   <depend>pinky_description</depend>
   <depend>rclpy</depend>
+  <depend>ros_gz_bridge</depend>
   <depend>ros_gz_image</depend>
+  <depend>ros_gz_sim</depend>
 
   <test_depend>ament_lint_auto</test_depend>
   <test_depend>ament_lint_common</test_depend>

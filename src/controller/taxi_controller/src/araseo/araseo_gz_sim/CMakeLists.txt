@@ -12,8 +12,6 @@ endif()
 
 # find dependencies
 find_package(ament_cmake REQUIRED)
-find_package(ros_gz REQUIRED)
-find_package(gz_ros2_control REQUIRED)
 find_package(gz-sim8 REQUIRED)
 find_package(gz-plugin2 REQUIRED)
 
@@ -38,7 +36,7 @@ install(
 
 install(
   PROGRAMS
-    scripts/gazebo_gps_publisher.py
+    scripts/gz_gps_service.py
   DESTINATION lib/${PROJECT_NAME}
 )
 
