@@ -5,7 +5,7 @@ import json
 import math
 from pathlib import Path as FilePath
 
-from araseo_navigation.action import NavigateToNearestStop
+from araseo_msgs.action import NavigateToNearestStop
 from geometry_msgs.msg import PoseStamped
 from nav2_msgs.action import ComputeRoute, FollowPath
 from nav_msgs.msg import Path
