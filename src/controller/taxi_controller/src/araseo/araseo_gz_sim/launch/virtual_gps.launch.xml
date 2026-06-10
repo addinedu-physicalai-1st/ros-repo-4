@@ -1,0 +1,38 @@
+<?xml version='1.0' ?>
+<launch>
+    <arg name="pinky_id" default="54"/>
+    <arg name="use_sim_time" default="True"/>
+    <arg name="pinky_params" default="$(find-pkg-share pinky_bringup)/config/pinky_params.yaml"/>
+
+    <let name="pinky_id_int" value="$(eval 'int(\'$(var pinky_id)\' or \'0\') &amp; 0xFF')"/>
+    <let name="namespace" value="pinky_$(var pinky_id_int)"/>
+    <let name="robot_name" value="$(var namespace)_pinky"/>
+    <let name="map_frame_id" value="map"/>
+    <let name="odom_frame_id" value="$(var namespace)/odom"/>
+    <let name="base_frame_id" value="$(var namespace)/base_footprint"/>
+
+    <group>
+        <push-ros-namespace namespace="$(var namespace)"/>
+
+        <node pkg="ros_gz_bridge" exec="parameter_bridge" name="gps_pose_bridge"
+              args="/model/$(var robot_name)/pose@geometry_msgs/msg/PoseStamped[gz.msgs.Pose">
+            <param name="use_sim_time" value="$(var use_sim_time)"/>
+            <remap from="/model/$(var robot_name)/pose" to="gazebo/pose"/>
+        </node>
+
+        <node pkg="araseo_gz_sim" exec="gazebo_gps_publisher.py" name="gazebo_gps_publisher">
+            <param from="$(var pinky_params)"/>
+            <param name="use_sim_time" value="$(var use_sim_time)"/>
+            <param name="pinky_id" value="$(var pinky_id_int)"/>
+        </node>
+
+        <node pkg="pinky_bringup" exec="gps_odometry_calibrator" name="gps_odometry_calibrator">
+            <param from="$(var pinky_params)"/>
+            <param name="use_sim_time" value="$(var use_sim_time)"/>
+            <param name="namespace" value="$(var namespace)"/>
+            <param name="map_frame_id" value="$(var map_frame_id)"/>
+            <param name="odom_frame_id" value="$(var odom_frame_id)"/>
+            <param name="base_frame_id" value="$(var base_frame_id)"/>
+        </node>
+    </group>
+</launch>

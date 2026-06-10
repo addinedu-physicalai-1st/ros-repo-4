@@ -1,0 +1,46 @@
+<?xml version='1.0' ?>
+<launch>
+    <arg name="pinky_id" default="54"/>
+    <arg name="use_sim_time" default="True"/>
+    <arg name="cam_tilt_deg" default="25"/>
+    <arg name="spawn_x" default="0.0"/>
+    <arg name="spawn_y" default="0.0"/>
+    <arg name="spawn_z" default="0.0"/>
+    <arg name="spawn_yaw" default="0"/>
+
+    <let name="pinky_id_int" value="$(eval 'int(\'$(var pinky_id)\' or \'0\') &amp; 0xFF')"/>
+    <let name="namespace" value="pinky_$(var pinky_id_int)"/>
+    <let name="robot_name" value="$(var namespace)_pinky"/>
+
+    <include file="$(find-pkg-share pinky_description)/launch/upload_robot.launch.py">
+        <arg name="namespace" value="$(var namespace)"/>
+        <arg name="is_sim" value="$(var use_sim_time)"/>
+        <arg name="cam_tilt_deg" value="$(var cam_tilt_deg)"/>
+    </include>
+
+    <node pkg="ros_gz_sim" exec="create" name="$(var namespace)_create"
+          args="-name $(var robot_name) -topic /$(var namespace)/robot_description -x $(var spawn_x) -y $(var spawn_y) -z $(var spawn_z) -Y $(var spawn_yaw)">
+        <param name="use_sim_time" value="$(var use_sim_time)"/>
+    </node>
+
+    <group>
+        <push-ros-namespace namespace="$(var namespace)"/>
+
+        <node pkg="ros_gz_bridge" exec="parameter_bridge" name="robot_bridge"
+              args="/$(var namespace)/odom@nav_msgs/msg/Odometry[gz.msgs.Odometry /$(var namespace)/scan@sensor_msgs/msg/LaserScan[gz.msgs.LaserScan /$(var namespace)/cmd_vel@geometry_msgs/msg/Twist]gz.msgs.Twist /$(var namespace)/joint_states@sensor_msgs/msg/JointState[gz.msgs.Model /tf@tf2_msgs/msg/TFMessage[gz.msgs.Pose_V /$(var namespace)/camera/camera_info@sensor_msgs/msg/CameraInfo[gz.msgs.CameraInfo">
+            <param name="use_sim_time" value="$(var use_sim_time)"/>
+        </node>
+
+        <node pkg="ros_gz_image" exec="image_bridge" name="image_bridge_raw"
+              args="/$(var namespace)/camera/image_raw">
+            <param name="use_sim_time" value="$(var use_sim_time)"/>
+            <remap from="/$(var namespace)/camera/image_raw" to="camera/image_raw"/>
+        </node>
+
+        <node pkg="ros_gz_image" exec="image_bridge" name="image_bridge"
+              args="/$(var namespace)/camera">
+            <param name="use_sim_time" value="$(var use_sim_time)"/>
+            <remap from="/$(var namespace)/camera" to="camera"/>
+        </node>
+    </group>
+</launch>
