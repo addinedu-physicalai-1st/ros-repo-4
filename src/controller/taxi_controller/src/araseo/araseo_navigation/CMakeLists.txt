@@ -26,7 +26,7 @@ install(
 )
 
 install(PROGRAMS
-  scripts/nearest_stop_navigator.py
+  nodes/nearest_stop_navigator.py
   scripts/rviz_display_route_marker.py
   DESTINATION lib/${PROJECT_NAME}
 )
