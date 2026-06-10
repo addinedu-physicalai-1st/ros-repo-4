@@ -25,7 +25,7 @@ install(
 
 install(PROGRAMS
   scripts/nearest_stop_navigator.py
-  scripts/route_debug_view.py
+  scripts/rviz_display_route_marker.py
   scripts/validate_route_data.py
   DESTINATION lib/${PROJECT_NAME}
 )

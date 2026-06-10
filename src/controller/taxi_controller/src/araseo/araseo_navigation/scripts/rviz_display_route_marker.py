@@ -17,10 +17,10 @@ from visualization_msgs.msg import Marker, MarkerArray
 import yaml
 
 
-class RouteDebugView(Node):
+class RvizDisplayRouteMarker(Node):
 
     def __init__(self):
-        super().__init__('route_debug_view')
+        super().__init__('rviz_display_route_marker')
 
         self.stops_file = self.declare_parameter('stops_file', '').value
         self.route_graph_file = self.declare_parameter(
@@ -254,7 +254,7 @@ class RouteDebugView(Node):
 
 def main(args=None):
     rclpy.init(args=args)
-    node = RouteDebugView()
+    node = RvizDisplayRouteMarker()
     try:
         rclpy.spin(node)
     except (ExternalShutdownException, KeyboardInterrupt):

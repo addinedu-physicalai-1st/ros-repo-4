@@ -6,7 +6,7 @@
   <arg name="plan_topic" default="plan"/>
   <arg name="local_plan_topic" default="local_plan"/>
 
-  <node pkg="araseo_navigation" exec="route_debug_view.py" name="route_debug_view" output="screen">
+  <node pkg="araseo_navigation" exec="rviz_display_route_marker.py" name="rviz_display_route_marker" output="screen">
     <param name="use_sim_time" value="$(var use_sim_time)"/>
     <param name="stops_file" value="$(var stops_file)" type="str"/>
     <param name="route_graph_file" value="$(var route_graph_file)" type="str"/>
