@@ -1,0 +1,52 @@
+<?xml version='1.0'?>
+<launch>
+    <set_env name="RCUTILS_LOGGING_BUFFERED_STREAM" value="1"/>
+    <set_env name="RCUTILS_LOGGING_USE_SIMTIME" value="1"/>
+
+    <arg name="pinky_id" default="54"/>
+    <arg name="use_sim_time" default="true"/>
+    <arg name="params_file" default="$(find-pkg-share araseo_navigation)/params/nav_params.yaml"/>
+    <arg name="route_graph_file" default="$(find-pkg-share araseo_navigation)/params/route_graph.geojson"/>
+    <arg name="stops_file" default="$(find-pkg-share araseo_navigation)/params/stops.yaml"/>
+    <arg name="autostart" default="True"/>
+    <arg name="container_name" default="nav2_container"/>
+    <arg name="use_composition" default="False"/>
+    <arg name="use_respawn" default="False"/>
+    <arg name="log_level" default="info"/>
+    <arg name="lifecycle_nodes_nav" default="['controller_server', 'route_server', 'velocity_smoother']"/>
+
+    <let name="pinky_id_int" value="$(eval 'int(\'$(var pinky_id)\' or \'0\') &amp; 0xFF')"/>
+    <let name="namespace" value="pinky_$(var pinky_id_int)"/>
+    <let name="map_frame_id" value="map"/>
+    <let name="odom_frame_id" value="$(var namespace)/odom"/>
+    <let name="base_frame_id" value="$(var namespace)/base_footprint"/>
+    <let name="scan_topic" value="scan"/>
+    <let name="container_name_full" value="/$(var namespace)/$(var container_name)"/>
+
+    <node pkg="rclcpp_components" exec="component_container_isolated"
+          name="$(var container_name)" namespace="$(var namespace)" output="screen"
+          args="--ros-args --log-level $(var log_level)"
+          if="$(var use_composition)">
+        <param from="$(var params_file)" allow_substs="true"/>
+        <param name="autostart" value="$(var autostart)"/>
+        <param name="use_sim_time" value="$(var use_sim_time)" type="bool"/>
+    </node>
+
+    <include file="$(find-pkg-share araseo_navigation)/launch/navigation_nodes.launch.xml">
+        <arg name="namespace" value="$(var namespace)"/>
+        <arg name="use_sim_time" value="$(var use_sim_time)"/>
+        <arg name="params_file" value="$(var params_file)"/>
+        <arg name="route_graph_file" value="$(var route_graph_file)"/>
+        <arg name="stops_file" value="$(var stops_file)"/>
+        <arg name="map_frame" value="$(var map_frame_id)"/>
+        <arg name="odom_frame" value="$(var odom_frame_id)"/>
+        <arg name="base_frame" value="$(var base_frame_id)"/>
+        <arg name="scan_topic" value="$(var scan_topic)"/>
+        <arg name="autostart" value="$(var autostart)"/>
+        <arg name="container_name" value="$(var container_name_full)"/>
+        <arg name="use_composition" value="$(var use_composition)"/>
+        <arg name="use_respawn" value="$(var use_respawn)"/>
+        <arg name="log_level" value="$(var log_level)"/>
+        <arg name="lifecycle_nodes" value="$(var lifecycle_nodes_nav)"/>
+    </include>
+</launch>

@@ -3,8 +3,7 @@
     <set_env name="RCUTILS_LOGGING_BUFFERED_STREAM" value="1"/>
     <set_env name="RCUTILS_LOGGING_USE_SIMTIME" value="1"/>
 
-    <arg name="pinky_id" default=""/>
-    <arg name="pinky_params_file" default="$(find-pkg-share pinky_bringup)/config/pinky_params.yaml"/>
+    <arg name="pinky_id" default="54"/>
     <arg name="use_sim_time" default="true"/>
     <arg name="params_file" default="$(find-pkg-share araseo_navigation)/params/nav_params.yaml"/>
     <arg name="route_graph_file" default="$(find-pkg-share araseo_navigation)/params/route_graph.geojson"/>
@@ -16,9 +15,8 @@
     <arg name="log_level" default="info"/>
     <arg name="lifecycle_nodes_nav" default="['controller_server', 'route_server', 'velocity_smoother']"/>
 
-    <include file="$(find-pkg-share araseo_navigation)/launch/bringup.launch.py">
+    <include file="$(find-pkg-share araseo_navigation)/launch/navigation.launch.xml">
         <arg name="pinky_id" value="$(var pinky_id)"/>
-        <arg name="pinky_params_file" value="$(var pinky_params_file)"/>
         <arg name="use_sim_time" value="$(var use_sim_time)"/>
         <arg name="params_file" value="$(var params_file)"/>
         <arg name="route_graph_file" value="$(var route_graph_file)"/>

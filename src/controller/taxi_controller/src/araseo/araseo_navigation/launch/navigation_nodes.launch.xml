@@ -2,14 +2,16 @@
 <launch>
     <set_env name="RCUTILS_LOGGING_BUFFERED_STREAM" value="1"/>
 
-    <arg name="namespace" default=""/>
+    <arg name="namespace" default="pinky_54"/>
     <arg name="use_sim_time" default="true"/>
     <arg name="autostart" default="true"/>
     <arg name="params_file" default="$(find-pkg-share araseo_navigation)/params/nav_params.yaml"/>
     <arg name="route_graph_file" default="$(find-pkg-share araseo_navigation)/params/route_graph.geojson"/>
     <arg name="stops_file" default="$(find-pkg-share araseo_navigation)/params/stops.yaml"/>
     <arg name="map_frame" default="map"/>
-    <arg name="base_frame" default="base_footprint"/>
+    <arg name="odom_frame" default="$(var namespace)/odom"/>
+    <arg name="base_frame" default="$(var namespace)/base_footprint"/>
+    <arg name="scan_topic" default="scan"/>
     <arg name="use_composition" default="False"/>
     <arg name="container_name" default="nav2_container"/>
     <arg name="use_respawn" default="False"/>
@@ -18,21 +20,21 @@
 
     <load_composable_node target="$(var container_name)" if="$(var use_composition)">
         <composable_node pkg="nav2_controller" plugin="nav2_controller::ControllerServer" name="controller_server">
-            <param from="$(var params_file)"/>
+            <param from="$(var params_file)" allow_substs="true"/>
             <param name="use_sim_time" value="$(var use_sim_time)" type="bool"/>
             <param name="autostart" value="$(var autostart)"/>
             <remap from="cmd_vel" to="cmd_vel_nav"/>
         </composable_node>
 
         <composable_node pkg="nav2_route" plugin="nav2_route::RouteServer" name="route_server">
-            <param from="$(var params_file)"/>
+            <param from="$(var params_file)" allow_substs="true"/>
             <param name="graph_filepath" value="$(var route_graph_file)"/>
             <param name="use_sim_time" value="$(var use_sim_time)" type="bool"/>
             <param name="autostart" value="$(var autostart)"/>
         </composable_node>
 
         <composable_node pkg="nav2_velocity_smoother" plugin="nav2_velocity_smoother::VelocitySmoother" name="velocity_smoother">
-            <param from="$(var params_file)"/>
+            <param from="$(var params_file)" allow_substs="true"/>
             <param name="use_sim_time" value="$(var use_sim_time)" type="bool"/>
             <param name="autostart" value="$(var autostart)"/>
             <remap from="cmd_vel" to="cmd_vel_nav"/>
@@ -53,7 +55,7 @@
               respawn="$(var use_respawn)" respawn_delay="2.0"
               args="--ros-args --log-level $(var log_level)">
             <param name="autostart" value="$(var autostart)"/>
-            <param from="$(var params_file)"/>
+            <param from="$(var params_file)" allow_substs="true"/>
             <param name="use_sim_time" value="$(var use_sim_time)" type="bool"/>
             <remap from="cmd_vel" to="cmd_vel_nav"/>
         </node>
@@ -62,7 +64,7 @@
               respawn="$(var use_respawn)" respawn_delay="2.0"
               args="--ros-args --log-level $(var log_level)">
             <param name="autostart" value="$(var autostart)"/>
-            <param from="$(var params_file)"/>
+            <param from="$(var params_file)" allow_substs="true"/>
             <param name="use_sim_time" value="$(var use_sim_time)" type="bool"/>
             <param name="graph_filepath" value="$(var route_graph_file)"/>
         </node>
@@ -71,7 +73,7 @@
               respawn="$(var use_respawn)" respawn_delay="2.0"
               args="--ros-args --log-level $(var log_level)">
             <param name="autostart" value="$(var autostart)"/>
-            <param from="$(var params_file)"/>
+            <param from="$(var params_file)" allow_substs="true"/>
             <param name="use_sim_time" value="$(var use_sim_time)" type="bool"/>
             <remap from="cmd_vel" to="cmd_vel_nav"/>
             <remap from="cmd_vel_smoothed" to="cmd_vel"/>
