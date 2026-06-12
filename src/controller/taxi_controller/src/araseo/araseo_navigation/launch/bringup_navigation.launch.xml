@@ -1,24 +1,46 @@
 <?xml version='1.0'?>
 <launch>
+    <!-- Launch logging behavior -->
     <set_env name="RCUTILS_LOGGING_BUFFERED_STREAM" value="1"/>
+    <set_env name="RCUTILS_LOGGING_USE_SIMTIME" value="1"/>
 
-    <arg name="namespace" default="pinky_54"/>
+    <!-- Robot identity and shared navigation inputs -->
+    <arg name="pinky_id" default="54"/>
     <arg name="use_sim_time" default="true"/>
-    <arg name="autostart" default="true"/>
     <arg name="params_file" default="$(find-pkg-share araseo_navigation)/params/nav_params.yaml"/>
     <arg name="route_graph_file" default="$(find-pkg-share araseo_navigation)/params/route_graph.geojson"/>
     <arg name="stops_file" default="$(find-pkg-share araseo_navigation)/params/stops.yaml"/>
-    <arg name="map_frame" default="map"/>
-    <arg name="odom_frame" default="$(var namespace)/odom"/>
-    <arg name="base_frame" default="$(var namespace)/base_footprint"/>
-    <arg name="scan_topic" default="scan"/>
-    <arg name="use_composition" default="False"/>
-    <arg name="container_name" default="nav2_container"/>
-    <arg name="use_respawn" default="False"/>
-    <arg name="log_level" default="debug"/>
-    <arg name="lifecycle_nodes" default="['controller_server', 'route_server', 'velocity_smoother']"/>
 
-    <load_composable_node target="$(var container_name)" if="$(var use_composition)">
+    <!-- Nav2 process mode and lifecycle settings -->
+    <arg name="autostart" default="True"/>
+    <arg name="container_name" default="nav2_container"/>
+    <arg name="use_composition" default="False"/>
+    <arg name="use_respawn" default="False"/>
+    <arg name="log_level" default="info"/>
+    <arg name="lifecycle_nodes_nav" default="['controller_server', 'route_server', 'velocity_smoother']"/>
+
+    <!-- Namespaces, frame IDs, and topics used by nav_params.yaml substitutions -->
+    <let name="pinky_id_int" value="$(eval 'int(\'$(var pinky_id)\' or \'0\') &amp; 0xFF')"/>
+    <let name="namespace" value="pinky_$(var pinky_id_int)"/>
+    <let name="map_frame" value="map"/>
+    <let name="odom_frame" value="$(var namespace)/odom"/>
+    <let name="base_frame" value="$(var namespace)/base_footprint"/>
+    <let name="scan_topic" value="scan"/>
+    <let name="container_name_full" value="/$(var namespace)/$(var container_name)"/>
+
+    <!-- Component container used when Nav2 is launched in composition mode -->
+    <node pkg="rclcpp_components" exec="component_container_isolated"
+          name="$(var container_name)" namespace="$(var namespace)" output="screen"
+          args="--ros-args --log-level $(var log_level)"
+          if="$(var use_composition)">
+        <param from="$(var params_file)" allow_substs="true"/>
+        <param name="autostart" value="$(var autostart)"/>
+        <param name="use_sim_time" value="$(var use_sim_time)" type="bool"/>
+    </node>
+
+    <!-- Nav2 composable nodes loaded into the shared container -->
+    <load_composable_node target="$(var container_name_full)" if="$(var use_composition)">
+        <!-- Path following controller. Publishes raw navigation velocity commands. -->
         <composable_node pkg="nav2_controller" plugin="nav2_controller::ControllerServer" name="controller_server">
             <param from="$(var params_file)" allow_substs="true"/>
             <param name="use_sim_time" value="$(var use_sim_time)" type="bool"/>
@@ -26,6 +48,7 @@
             <remap from="cmd_vel" to="cmd_vel_nav"/>
         </composable_node>
 
+        <!-- Route graph planner. Uses route_graph.geojson for graph-based path planning. -->
         <composable_node pkg="nav2_route" plugin="nav2_route::RouteServer" name="route_server">
             <param from="$(var params_file)" allow_substs="true"/>
             <param name="graph_filepath" value="$(var route_graph_file)"/>
@@ -33,6 +56,7 @@
             <param name="autostart" value="$(var autostart)"/>
         </composable_node>
 
+        <!-- Velocity smoothing. Converts navigation cmd_vel into the robot command topic. -->
         <composable_node pkg="nav2_velocity_smoother" plugin="nav2_velocity_smoother::VelocitySmoother" name="velocity_smoother">
             <param from="$(var params_file)" allow_substs="true"/>
             <param name="use_sim_time" value="$(var use_sim_time)" type="bool"/>
@@ -41,16 +65,19 @@
             <remap from="cmd_vel_smoothed" to="cmd_vel"/>
         </composable_node>
 
+        <!-- Lifecycle manager for the Nav2 nodes in this launch file. -->
         <composable_node pkg="nav2_lifecycle_manager" plugin="nav2_lifecycle_manager::LifecycleManager" name="lifecycle_manager_navigation">
             <param name="use_sim_time" value="$(var use_sim_time)" type="bool"/>
             <param name="autostart" value="$(var autostart)"/>
-            <param name="node_names" value="$(var lifecycle_nodes)"/>
+            <param name="node_names" value="$(var lifecycle_nodes_nav)"/>
         </composable_node>
     </load_composable_node>
 
+    <!-- Nav2 standalone processes used when composition mode is disabled -->
     <group unless="$(var use_composition)">
         <push-ros-namespace namespace="$(var namespace)"/>
 
+        <!-- Path following controller. Publishes raw navigation velocity commands. -->
         <node pkg="nav2_controller" exec="controller_server" output="screen"
               respawn="$(var use_respawn)" respawn_delay="2.0"
               args="--ros-args --log-level $(var log_level)">
@@ -60,6 +87,7 @@
             <remap from="cmd_vel" to="cmd_vel_nav"/>
         </node>
 
+        <!-- Route graph planner. Uses route_graph.geojson for graph-based path planning. -->
         <node pkg="nav2_route" exec="route_server" name="route_server" output="screen"
               respawn="$(var use_respawn)" respawn_delay="2.0"
               args="--ros-args --log-level $(var log_level)">
@@ -69,6 +97,7 @@
             <param name="graph_filepath" value="$(var route_graph_file)"/>
         </node>
 
+        <!-- Velocity smoothing. Converts navigation cmd_vel into the robot command topic. -->
         <node pkg="nav2_velocity_smoother" exec="velocity_smoother" name="velocity_smoother" output="screen"
               respawn="$(var use_respawn)" respawn_delay="2.0"
               args="--ros-args --log-level $(var log_level)">
@@ -79,15 +108,17 @@
             <remap from="cmd_vel_smoothed" to="cmd_vel"/>
         </node>
 
+        <!-- Lifecycle manager for the Nav2 nodes in this launch file. -->
         <node pkg="nav2_lifecycle_manager" exec="lifecycle_manager" name="lifecycle_manager_navigation" output="screen"
               respawn="$(var use_respawn)" respawn_delay="2.0"
               args="--ros-args --log-level $(var log_level)">
             <param name="use_sim_time" value="$(var use_sim_time)" type="bool"/>
             <param name="autostart" value="$(var autostart)"/>
-            <param name="node_names" value="$(var lifecycle_nodes)"/>
+            <param name="node_names" value="$(var lifecycle_nodes_nav)"/>
         </node>
     </group>
 
+    <!-- Araseo action server that converts nearest-stop requests into Nav2 route goals -->
     <group>
         <push-ros-namespace namespace="$(var namespace)"/>
         <node pkg="araseo_navigation" exec="nearest_stop_navigator.py" name="nearest_stop_navigator" output="screen">
