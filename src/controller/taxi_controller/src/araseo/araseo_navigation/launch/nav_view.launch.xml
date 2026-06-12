@@ -1,21 +1,41 @@
 <launch>
+  <arg name="pinky_id" default="54"/>
   <arg name="use_sim_time" default="true"/>
   <arg name="stops_file" default="$(find-pkg-share araseo_navigation)/params/stops.yaml"/>
   <arg name="route_graph_file" default="$(find-pkg-share araseo_navigation)/params/route_graph.geojson"/>
   <arg name="rviz_config" default="$(find-pkg-share araseo_navigation)/rviz/lane_nav_view.rviz"/>
-  <arg name="plan_topic" default="plan"/>
-  <arg name="local_plan_topic" default="local_plan"/>
+  <arg name="marker_topic" default="/route_graph_markers"/>
+  <arg name="goal_pose_topic" default="/goal_pose"/>
+
+  <let name="pinky_id_int" value="$(eval 'int(\'$(var pinky_id)\' or \'0\') &amp; 0xFF')"/>
+  <let name="namespace" value="pinky_$(var pinky_id_int)"/>
+  <let name="navigate_action_name" value="/$(var namespace)/navigate_to_nearest_stop"/>
+  <let name="plan_topic" value="/$(var namespace)/plan"/>
+  <let name="local_plan_topic" value="/$(var namespace)/local_plan"/>
 
   <node pkg="araseo_navigation" exec="rviz_display_route_marker.py" name="rviz_display_route_marker" output="screen">
     <param name="use_sim_time" value="$(var use_sim_time)"/>
     <param name="stops_file" value="$(var stops_file)" type="str"/>
     <param name="route_graph_file" value="$(var route_graph_file)" type="str"/>
     <param name="map_frame" value="map"/>
+    <param name="marker_topic" value="$(var marker_topic)" type="str"/>
+    <param name="goal_pose_topic" value="$(var goal_pose_topic)" type="str"/>
+    <param name="navigate_action_name" value="$(var navigate_action_name)" type="str"/>
     <param name="plan_topic" value="$(var plan_topic)" type="str"/>
     <param name="local_plan_topic" value="$(var local_plan_topic)" type="str"/>
   </node>
 
   <node pkg="rviz2" exec="rviz2" name="rviz2" args="-d $(var rviz_config)" output="screen">
     <param name="use_sim_time" value="$(var use_sim_time)"/>
+    <remap from="/pinky_54/robot_description" to="/$(var namespace)/robot_description"/>
+    <remap from="/pinky_54/odom" to="/$(var namespace)/odom"/>
+    <remap from="/pinky_54/scan" to="/$(var namespace)/scan"/>
+    <remap from="/pinky_54/plan" to="/$(var namespace)/plan"/>
+    <remap from="/pinky_54/local_plan" to="/$(var namespace)/local_plan"/>
+    <remap from="/pinky_54/global_costmap/costmap" to="/$(var namespace)/global_costmap/costmap"/>
+    <remap from="/pinky_54/global_costmap/costmap_updates" to="/$(var namespace)/global_costmap/costmap_updates"/>
+    <remap from="/pinky_54/local_costmap/costmap" to="/$(var namespace)/local_costmap/costmap"/>
+    <remap from="/pinky_54/local_costmap/costmap_updates" to="/$(var namespace)/local_costmap/costmap_updates"/>
+    <remap from="/pinky_54/local_costmap/published_footprint" to="/$(var namespace)/local_costmap/published_footprint"/>
   </node>
 </launch>

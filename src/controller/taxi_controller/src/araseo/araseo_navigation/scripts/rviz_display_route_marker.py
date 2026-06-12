@@ -2,9 +2,12 @@
 
 import json
 
-from geometry_msgs.msg import Point
+from action_msgs.msg import GoalStatus
+from araseo_msgs.action import NavigateToNearestStop
+from geometry_msgs.msg import Point, PoseStamped
 from nav_msgs.msg import Path
 import rclpy
+from rclpy.action import ActionClient
 from rclpy.executors import ExternalShutdownException
 from rclpy.node import Node
 from rclpy.qos import (
@@ -28,6 +31,18 @@ class RvizDisplayRouteMarker(Node):
             '',
         ).value
         self.map_frame = self.declare_parameter('map_frame', 'map').value
+        self.marker_topic = self.declare_parameter(
+            'marker_topic',
+            'route_graph_markers',
+        ).value
+        self.goal_pose_topic = self.declare_parameter(
+            'goal_pose_topic',
+            'goal_pose',
+        ).value
+        self.navigate_action_name = self.declare_parameter(
+            'navigate_action_name',
+            'navigate_to_nearest_stop',
+        ).value
         self.plan_topic = self.declare_parameter('plan_topic', 'plan').value
         self.local_plan_topic = self.declare_parameter(
             'local_plan_topic',
@@ -42,8 +57,19 @@ class RvizDisplayRouteMarker(Node):
         )
         self.marker_pub = self.create_publisher(
             MarkerArray,
-            'route_graph_markers',
+            self.marker_topic,
             marker_qos,
+        )
+        self.navigate_client = ActionClient(
+            self,
+            NavigateToNearestStop,
+            self.navigate_action_name,
+        )
+        self.goal_pose_sub = self.create_subscription(
+            PoseStamped,
+            self.goal_pose_topic,
+            self.on_goal_pose,
+            10,
         )
         self.plan_sub = self.create_subscription(
             Path,
@@ -62,7 +88,12 @@ class RvizDisplayRouteMarker(Node):
         self.route_graph = self.load_route_graph()
         self.global_plan = None
         self.local_plan = None
+        self.navigate_goal_active = False
         self.create_timer(1.0, self.publish_markers)
+        self.get_logger().info(
+            f"RViz goal bridge: '{self.goal_pose_topic}' -> "
+            f"'{self.navigate_action_name}'"
+        )
 
     def load_stops(self):
         if not self.stops_file:
@@ -88,6 +119,109 @@ class RvizDisplayRouteMarker(Node):
 
     def on_local_plan(self, path_msg):
         self.local_plan = path_msg
+
+    def on_goal_pose(self, pose_msg):
+        if self.navigate_goal_active:
+            self.get_logger().warn(
+                'Ignoring RViz goal because navigate_to_nearest_stop is active'
+            )
+            return
+
+        if not self.navigate_client.wait_for_server(timeout_sec=1.0):
+            self.get_logger().warn(
+                f"Action server '{self.navigate_action_name}' is unavailable"
+            )
+            return
+
+        goal = NavigateToNearestStop.Goal()
+        goal.query_pose = pose_msg
+        if not goal.query_pose.header.frame_id:
+            goal.query_pose.header.frame_id = self.map_frame
+
+        self.global_plan = None
+        self.local_plan = None
+        self.publish_clear_plan_markers()
+
+        self.navigate_goal_active = True
+        self.get_logger().info(
+            'Sending RViz goal pose to nearest-stop navigator: '
+            f'x={goal.query_pose.pose.position.x:.3f}, '
+            f'y={goal.query_pose.pose.position.y:.3f}, '
+            f"frame='{goal.query_pose.header.frame_id}'"
+        )
+        send_future = self.navigate_client.send_goal_async(
+            goal,
+            feedback_callback=self.on_navigate_feedback,
+        )
+        send_future.add_done_callback(self.on_navigate_goal_response)
+
+    def on_navigate_feedback(self, feedback_msg):
+        feedback = feedback_msg.feedback
+        if feedback.stop_id:
+            self.get_logger().debug(
+                f"Nearest stop candidate: stop_id='{feedback.stop_id}', "
+                f'distance={feedback.stop_distance:.3f} m'
+            )
+
+    def on_navigate_goal_response(self, future):
+        try:
+            goal_handle = future.result()
+        except Exception as exc:  # noqa: BLE001 - keep ROS callback alive
+            self.navigate_goal_active = False
+            self.get_logger().error(f'Failed to send navigation goal: {exc}')
+            return
+
+        if not goal_handle.accepted:
+            self.navigate_goal_active = False
+            self.get_logger().warn('navigate_to_nearest_stop rejected RViz goal')
+            return
+
+        result_future = goal_handle.get_result_async()
+        result_future.add_done_callback(self.on_navigate_result)
+
+    def on_navigate_result(self, future):
+        self.navigate_goal_active = False
+        try:
+            wrapped_result = future.result()
+        except Exception as exc:  # noqa: BLE001 - keep ROS callback alive
+            self.get_logger().error(f'Failed to get navigation result: {exc}')
+            return
+
+        result = wrapped_result.result
+        if (
+            wrapped_result.status == GoalStatus.STATUS_SUCCEEDED
+            and result.success
+        ):
+            self.get_logger().info(
+                f"Arrived at nearest stop '{result.stop_id}' "
+                f'(route_node_id={result.route_node_id})'
+            )
+            return
+
+        self.get_logger().warn(
+            f'Nearest-stop navigation finished with status={wrapped_result.status}, '
+            f"success={result.success}, message='{result.message}'"
+        )
+
+    def build_delete_marker(self, marker_id, namespace, now):
+        marker = Marker()
+        marker.header.frame_id = self.map_frame
+        marker.header.stamp = now
+        marker.ns = namespace
+        marker.id = marker_id
+        marker.action = Marker.DELETE
+        return marker
+
+    def publish_clear_plan_markers(self):
+        now = self.get_clock().now().to_msg()
+        marker_array = MarkerArray()
+        marker_array.markers.append(
+            self.build_delete_marker(100, 'global_plan', now)
+        )
+        marker_array.markers.append(
+            self.build_delete_marker(101, 'local_plan', now)
+        )
+        self.marker_pub.publish(marker_array)
 
     def build_path_marker(
         self,
@@ -120,6 +254,28 @@ class RvizDisplayRouteMarker(Node):
             marker.points.append(point)
 
         return marker
+
+    def append_stop_label_markers(self, marker_array, now):
+        for marker_id, stop in enumerate(self.stops, start=1):
+            pose = stop.get('pose', {})
+            marker = Marker()
+            marker.header.frame_id = self.map_frame
+            marker.header.stamp = now
+            marker.ns = 'stop_labels'
+            marker.id = marker_id
+            marker.type = Marker.TEXT_VIEW_FACING
+            marker.action = Marker.ADD
+            marker.pose.position.x = float(pose['x'])
+            marker.pose.position.y = float(pose['y'])
+            marker.pose.position.z = float(pose.get('z', 0.0)) + 0.16
+            marker.pose.orientation.w = 1.0
+            marker.scale.z = 0.12
+            marker.color.r = 0.85
+            marker.color.g = 1.0
+            marker.color.b = 0.85
+            marker.color.a = 0.95
+            marker.text = stop.get('stop_id', f'stop_{marker_id}')
+            marker_array.markers.append(marker)
 
     def build_stop_marker(self, now):
         marker = Marker()
@@ -225,6 +381,7 @@ class RvizDisplayRouteMarker(Node):
 
         if self.stops:
             marker_array.markers.append(self.build_stop_marker(now))
+            self.append_stop_label_markers(marker_array, now)
 
         if self.global_plan is not None:
             marker_array.markers.append(
